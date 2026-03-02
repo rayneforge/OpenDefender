@@ -1,0 +1,14 @@
+{
+	"servers": {
+		"open-defender": {
+			"type": "stdio",
+			"command": "dotnet",
+			"args": [
+				"run",
+				"--project",
+				"${workspaceFolder}/solutions/observability/src/Service/Service.csproj"
+			]
+		}
+	},
+	"inputs": []
+}

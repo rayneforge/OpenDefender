@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/Library/">
+    <Project Path="Library/SharedResources/SharedResources.csproj" />
+  </Folder>
+  <Folder Name="/Service/">
+    <Project Path="Service/McpServer/McpServer.csproj" />
+  </Folder>
+  <Project Path="Service/Service.csproj" />
+</Solution>

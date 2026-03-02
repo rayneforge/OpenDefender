@@ -1,0 +1,87 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build & Pack (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            runtime: linux-x64
+            extension: ""
+            asset_name: observability-linux
+          - os: windows-latest
+            runtime: win-x64
+            extension: ".exe"
+            asset_name: observability-windows
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore src/ObservabilityStack.slnx
+
+    - name: Publish Service
+      run: |
+        dotnet publish src/Service/Service.csproj -c Release -r ${{ matrix.runtime }} --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -o publish/${{ matrix.runtime }}
+
+    # Create Zip for Windows
+    - name: Pack Windows
+      if: matrix.os == 'windows-latest'
+      run: |
+        Compress-Archive -Path publish/${{ matrix.runtime }}/* -DestinationPath ${{ matrix.asset_name }}.zip
+
+    # Create Tarball for Linux
+    - name: Pack Linux
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        tar -czvf ${{ matrix.asset_name }}.tar.gz -C publish/${{ matrix.runtime }} .
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.asset_name }}
+        path: |
+          *.zip
+          *.tar.gz
+
+  publish-nuget:
+    name: Publish to NuGet
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore src/ObservabilityStack.slnx
+
+    - name: Pack MCP Server
+      run: dotnet pack src/Service/Service.csproj -c Release -o ./nupkg
+
+    - name: Push to NuGet
+      run: |
+        dotnet nuget push ./nupkg/Rayneforge.OpenDefender.*.nupkg \
+          --api-key ${{ secrets.NUGET_API_KEY }} \
+          --source https://api.nuget.org/v3/index.json \
+          --skip-duplicate
