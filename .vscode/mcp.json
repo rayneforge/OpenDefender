@@ -6,7 +6,7 @@
 			"args": [
 				"run",
 				"--project",
-				"${workspaceFolder}/solutions/observability/src/Service/Service.csproj"
+				"${workspaceFolder}/src/Service/Service.csproj"
 			]
 		}
 	},
