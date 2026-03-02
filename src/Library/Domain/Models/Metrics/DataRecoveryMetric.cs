@@ -7,7 +7,7 @@ public class DataRecoveryMetric
 {
     public int Id { get; set; }
     public DateTime Timestamp { get; set; }
-    public string Source { get; set; }
-    public string Status { get; set; }
+    public required string Source { get; set; }
+    public required string Status { get; set; }
     public long SizeBytes { get; set; } // Changed to long
 }

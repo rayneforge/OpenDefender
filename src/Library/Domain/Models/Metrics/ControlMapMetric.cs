@@ -7,8 +7,8 @@ public class ControlMapMetric
 {
     public int Id { get; set; }
     public DateTime Timestamp { get; set; }
-    public string Layer { get; set; }
-    public string Status { get; set; }
-    public string Signal { get; set; }
-    public string ActionRequired { get; set; }
+    public required string Layer { get; set; }
+    public required string Status { get; set; }
+    public required string Signal { get; set; }
+    public required string ActionRequired { get; set; }
 }

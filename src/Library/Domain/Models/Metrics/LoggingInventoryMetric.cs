@@ -7,8 +7,8 @@ public class LoggingInventoryMetric
 {
     public int Id { get; set; }
     public DateTime Timestamp { get; set; }
-    public string LogSource { get; set; }
-    public string LogType { get; set; }
+    public required string LogSource { get; set; }
+    public required string LogType { get; set; }
     public long SizeBytes { get; set; } // Changed from string Size to long SizeBytes
-    public string Status { get; set; }
+    public required string Status { get; set; }
 }

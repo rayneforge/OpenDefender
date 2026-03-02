@@ -7,7 +7,7 @@ public class PacketTracingMetric
 {
     public int Id { get; set; }
     public DateTime Timestamp { get; set; }
-    public string Interface { get; set; }
+    public required string Interface { get; set; }
     public int PacketsCaptured { get; set; } // Changed from string to int
-    public string Status { get; set; }
+    public required string Status { get; set; }
 }

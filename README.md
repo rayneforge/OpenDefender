@@ -174,7 +174,11 @@ Ensure `TransportType: "Stdio"` in [src/Service/appsettings.json](src/Service/ap
         "args": [
           "run",
           "--project",
-          "${workspaceFolder}/solutions/observability/src/Service/Service.csproj"
+          "${workspaceFolder}/solutions/observability/src/Service/Service.csproj",
+          "--nologo",
+          "-v",
+          "quiet",
+          "--consoleLoggerParameters:ErrorsOnly"
         ]
       }
     }

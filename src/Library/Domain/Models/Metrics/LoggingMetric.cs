@@ -7,8 +7,8 @@ public class LoggingMetric
 {
     public int Id { get; set; }
     public DateTime Timestamp { get; set; }
-    public string Component { get; set; }
-    public string Metric { get; set; } // e.g. "ErrorRate", "Volume"
+    public required string Component { get; set; }
+    public required string Metric { get; set; } // e.g. "ErrorRate", "Volume"
     public double Value { get; set; }  // Changed from string to double
-    public string Status { get; set; }
+    public required string Status { get; set; }
 }

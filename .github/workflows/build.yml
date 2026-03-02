@@ -15,10 +15,12 @@ jobs:
             runtime: linux-x64
             asset_name: Rayneforge-OpenDefender-linux
             archive_ext: tar.gz
+            test_filter: "Category=LinuxCommand"
           - os: windows-latest
             runtime: win-x64
             asset_name: Rayneforge-OpenDefender-windows
             archive_ext: zip
+            test_filter: "Category=WindowsCommand"
 
     steps:
     - uses: actions/checkout@v4
@@ -34,8 +36,8 @@ jobs:
     - name: Build solution
       run: dotnet build src/ObservabilityStack.slnx -c Release --no-restore
 
-    - name: Run tests (Disabled)
-      run: echo "Skipping tests in CI environment"
+    - name: Run Platform Tests
+      run: dotnet test src/Tests/Tests.csproj -c Release --no-build --filter "${{ matrix.test_filter }}"
 
     - name: Publish Service
       run: |

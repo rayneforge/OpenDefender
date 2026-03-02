@@ -10,9 +10,9 @@ using Library.Domain.Models.Metrics;
 
 namespace Library.Application.Services.Orchestration;
 
-public class AnalyticsOrchestrator : IOrchestrator<OrchestrationState>
+public class AnalyticsOrchestrator : IOrchestrator<OrchestrationState?>
 {
-    public async Task RunAsync(OrchestrationState state = null)
+    public async Task RunAsync(OrchestrationState? state = null)
     {
         using var rawDb = new ReportDbContext();
         using var analyticsDb = new AnalyticsDbContext();

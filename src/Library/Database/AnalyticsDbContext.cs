@@ -12,6 +12,11 @@ public class AnalyticsDbContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        optionsBuilder.UseSqlite("Data Source=analytics_reports.db");
+        var dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ".data", "analytics_reports.db");
+        var directory = Path.GetDirectoryName(dbPath);
+        if (directory != null && !Directory.Exists(directory)) 
+            Directory.CreateDirectory(directory);
+
+        optionsBuilder.UseSqlite($"Data Source={dbPath}");
     }
 }

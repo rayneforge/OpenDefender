@@ -7,8 +7,8 @@ public class HardwareMetric
 {
     public int Id { get; set; }
     public DateTime Timestamp { get; set; }
-    public string Device { get; set; }
-    public string Attribute { get; set; }
+    public required string Device { get; set; }
+    public required string Attribute { get; set; }
     public double Value { get; set; } // Changed to double for threshold checks
-    public string Status { get; set; }
+    public required string Status { get; set; }
 }

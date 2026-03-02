@@ -7,8 +7,8 @@ public class NetworkingMetric
 {
     public int Id { get; set; }
     public DateTime Timestamp { get; set; }
-    public string Interface { get; set; }
-    public string Metric { get; set; } // e.g. "RX_Bytes", "TX_Packets"
+    public required string Interface { get; set; }
+    public required string Metric { get; set; } // e.g. "RX_Bytes", "TX_Packets"
     public double Value { get; set; }  // Changed from string to double
-    public string Status { get; set; }
+    public required string Status { get; set; }
 }

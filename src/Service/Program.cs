@@ -70,7 +70,13 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var reportDb = scope.ServiceProvider.GetRequiredService<ReportDbContext>();
+    var analyticsDb = scope.ServiceProvider.GetRequiredService<AnalyticsDbContext>();
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+    // Ensure database exists
+    logger.LogInformation("Ensuring databases are created...");
+    await reportDb.Database.EnsureCreatedAsync();
+    await analyticsDb.Database.EnsureCreatedAsync();
 
     if (!await reportDb.Orchestrations.AnyAsync())
     {

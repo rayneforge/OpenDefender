@@ -6,8 +6,8 @@ public class LedgerAnalytics
 {
     public int Id { get; set; }
     public DateTime Timestamp { get; set; }
-    public string LogSource { get; set; } // The component name
-    public string LogType { get; set; } // Auth, Perf, App, System
+    public required string LogSource { get; set; } // The component name
+    public required string LogType { get; set; } // Auth, Perf, App, System
     public long CurrentSizeBytes { get; set; }
     public long GrowthBytes { get; set; } // Delta size
     public double GrowthRateBytesPerHour { get; set; }
