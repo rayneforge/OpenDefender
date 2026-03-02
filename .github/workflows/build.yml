@@ -19,10 +19,12 @@ jobs:
             runtime: linux-x64
             extension: ""
             asset_name: observability-linux
+            archive_ext: tar.gz
           - os: windows-latest
             runtime: win-x64
             extension: ".exe"
             asset_name: observability-windows
+            archive_ext: zip
 
     steps:
     - uses: actions/checkout@v4
@@ -31,9 +33,23 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '10.0.x'
+        include-prerelease: true
 
     - name: Restore dependencies
       run: dotnet restore src/ObservabilityStack.slnx
+
+    - name: Build solution
+      run: dotnet build src/ObservabilityStack.slnx -c Release --no-restore
+
+    - name: Run tests
+      run: dotnet test src/Tests/Tests.csproj -c Release --no-build --filter "Category!=Integration" --logger "trx;LogFileName=results.trx"
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results-${{ matrix.runtime }}
+        path: src/Tests/TestResults/results.trx
 
     - name: Publish Service
       run: |
@@ -55,15 +71,13 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.asset_name }}
-        path: |
-          *.zip
-          *.tar.gz
+        path: ${{ matrix.asset_name }}.${{ matrix.archive_ext }}
 
   publish-nuget:
     name: Publish to NuGet
     needs: build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.event_name == 'workflow_dispatch'
 
     steps:
     - uses: actions/checkout@v4
@@ -72,12 +86,13 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '10.0.x'
+        include-prerelease: true
 
     - name: Restore dependencies
       run: dotnet restore src/ObservabilityStack.slnx
 
     - name: Pack MCP Server
-      run: dotnet pack src/Service/Service.csproj -c Release -o ./nupkg
+      run: dotnet pack src/Service/Service.csproj -c Release -o ./nupkg -p:Version=1.0.${{ github.run_number }}
 
     - name: Push to NuGet
       run: |
