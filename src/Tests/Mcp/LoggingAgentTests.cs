@@ -1,5 +1,6 @@
 using Microsoft.Extensions.AI;
 using ModelContextProtocol;
+using Library.Application.Factories;
 using Tests.Utilities;
 using Tests.Utilities.Fixtures;
 using Xunit.Abstractions;

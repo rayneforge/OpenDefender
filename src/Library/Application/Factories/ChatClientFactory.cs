@@ -1,7 +1,7 @@
 using Microsoft.Extensions.AI;
 using OllamaSharp;
 
-namespace Tests.Utilities;
+namespace Library.Application.Factories;
 
 /// <summary>
 /// Single swap-point for the underlying LLM provider.
