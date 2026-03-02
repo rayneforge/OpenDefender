@@ -8,12 +8,12 @@
     <!-- NuGet MCP Server Tool Packaging -->
     <IsPackable>true</IsPackable>
     <PackAsTool>true</PackAsTool>
-    <ToolCommandName>opendefender</ToolCommandName>
+    <ToolCommandName>rayneforge-opendefender</ToolCommandName>
     <PackageId>Rayneforge.OpenDefender</PackageId>
     <PackageType>mcp-server</PackageType>
     <Version>1.0.0</Version>
     <Authors>Rayneforge</Authors>
-    <Description>OpenDefender — an MCP server for Linux system observability, diagnostics, and security tooling.</Description>
+    <Description>OpenDefender — an MCP server for Linux and Windows system observability, diagnostics, and security tooling.</Description>
     <PackageProjectUrl>https://github.com/rayneforge/opendefender</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageTags>mcp;mcp-server;observability;diagnostics;security;linux</PackageTags>

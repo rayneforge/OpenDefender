@@ -1,6 +1,6 @@
 # OpenDefender 🛡️
 
-**OpenDefender** is a device observability and AI agent enablement platform built on **.NET 10**. Its primary purpose is to eliminate repetitive manual command execution by giving AI agents structured, read-only visibility into system state — security posture, infrastructure health, reliability, and telemetry — through a typed MCP interface.
+**OpenDefender** is a device observability and AI agent enablement platform built on **.NET 10**. Its primary purpose is to eliminate repetitive manual command execution by giving AI agents structured, read-only visibility into system state — security posture, infrastructure health, reliability, and telemetry — across **Linux and Windows** through a typed MCP interface.
 
 Rather than granting agents broad shell access, OpenDefender collects, stages, and surfaces system telemetry through well-defined domain boundaries. Each agent role has a clearly scoped view of the data it owns, and all agents are read-only by design.
 
@@ -160,27 +160,67 @@ src/
 - .NET 10 SDK
 - Linux (collection probes use Linux system commands)
 
-### Run as MCP Server (Stdio — for GitHub Copilot / VS Code)
+### Run as MCP Server (Local Development)
 
 Ensure `TransportType: "Stdio"` in [src/Service/appsettings.json](src/Service/appsettings.json), then add to `.vscode/mcp.json`:
 
 ```json
 {
-  "servers": {
-    "open-defender": {
-      "type": "stdio",
-      "command": "dotnet",
-      "args": [
-        "run",
-        "--project",
-        "${workspaceFolder}/solutions/observability/src/Service/Service.csproj"
-      ]
+  "mcp": {
+    "servers": {
+      "open-defender-dev": {
+        "type": "stdio",
+        "command": "dotnet",
+        "args": [
+          "run",
+          "--project",
+          "${workspaceFolder}/solutions/observability/src/Service/Service.csproj"
+        ]
+      }
     }
   }
 }
 ```
 
-On first run with an empty database, the service automatically runs a full collection and analytics cycle before becoming available to agents.
+### Run as MCP Server (Installed via NuGet / .NET Tool)
+
+Once the package is installed globally:
+
+```bash
+dotnet tool install -g Rayneforge.OpenDefender
+```
+
+You can add it to your `.vscode/mcp.json` using the `dotnet tool run` command (which ensures the correct runtime is used):
+
+```json
+{
+  "mcp": {
+    "servers": {
+      "open-defender": {
+        "type": "stdio",
+        "command": "dotnet",
+        "args": ["tool", "run", "rayneforge-opendefender"]
+      }
+    }
+  }
+}
+```
+
+Alternatively, if `rayneforge-opendefender` is in your system PATH, you can invoke it directly:
+
+```json
+{
+  "mcp": {
+    "servers": {
+      "open-defender": {
+        "type": "stdio",
+        "command": "rayneforge-opendefender",
+        "args": []
+      }
+    }
+  }
+}
+```
 
 ### Run as HTTP Service (for OData browsing / debugging)
 
