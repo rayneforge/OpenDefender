@@ -184,6 +184,8 @@ Ensure `TransportType: "Stdio"` in [src/Service/appsettings.json](src/Service/ap
 
 ### Run as MCP Server (Installed via NuGet / .NET Tool)
 
+Install the nuget package from https://www.nuget.org/packages/Rayneforge.OpenDefender/ 
+
 Once the package is installed globally:
 
 ```bash
