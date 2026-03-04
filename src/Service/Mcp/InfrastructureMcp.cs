@@ -1,9 +1,7 @@
 using System.ComponentModel;
 using ModelContextProtocol.Server;
 using Library.Domain.Models.Queries;
-using Library.Infrastructure.Database;
-using Library.Infrastructure.Query;
-using System.Text.Json;
+using Library.Application.Tooling;
 
 namespace Service.Mcp;
 
@@ -22,36 +20,28 @@ public static class InfrastructureMcp
     [Description("Query raw resource metrics. Properties: Id (int), Timestamp (DateTime), Metric (string), Value (double), Threshold (double). Supports structured filters, ordering, and paging.")]
     public static async Task<string> QueryResourceMetrics(QueryRequest request)
     {
-        using var db = new ReportDbContext();
-        var results = await QueryHelper.ExecuteAsync(db.ResourceMetrics, request);
-        return JsonSerializer.Serialize(results);
+        return await InfrastructureTools.QueryResourceMetrics(request);
     }
 
     [McpServerTool(Name = "query_hardware_metrics", Title = "Query Hardware Metrics")]
     [Description("Query raw hardware metrics. Properties: Id (int), Timestamp (DateTime), Device (string), Attribute (string), Value (double), Status (string). Supports structured filters, ordering, and paging.")]
     public static async Task<string> QueryHardwareMetrics(QueryRequest request)
     {
-        using var db = new ReportDbContext();
-        var results = await QueryHelper.ExecuteAsync(db.HardwareMetrics, request);
-        return JsonSerializer.Serialize(results);
+        return await InfrastructureTools.QueryHardwareMetrics(request);
     }
 
     [McpServerTool(Name = "query_kernel_metrics", Title = "Query Kernel Metrics")]
     [Description("Query raw kernel / OS metrics. Properties: Id (int), Timestamp (DateTime), Category (string), Metric (string), Value (string), Alert (string). Supports structured filters, ordering, and paging.")]
     public static async Task<string> QueryKernelMetrics(QueryRequest request)
     {
-        using var db = new ReportDbContext();
-        var results = await QueryHelper.ExecuteAsync(db.KernelMetrics, request);
-        return JsonSerializer.Serialize(results);
+        return await InfrastructureTools.QueryKernelMetrics(request);
     }
 
     [McpServerTool(Name = "query_gpu_metrics", Title = "Query GPU Metrics")]
     [Description("Query raw GPU / accelerator metrics. Properties: Id (int), Timestamp (DateTime), Vendor (string), Device (string), GpuUtil (double), MemUtil (double), Temp (double). Supports structured filters, ordering, and paging.")]
     public static async Task<string> QueryGpuMetrics(QueryRequest request)
     {
-        using var db = new ReportDbContext();
-        var results = await QueryHelper.ExecuteAsync(db.GpuMetrics, request);
-        return JsonSerializer.Serialize(results);
+        return await InfrastructureTools.QueryGpuMetrics(request);
     }
 
     // ── Derived analytics ───────────────────────────────────────────────
@@ -60,9 +50,7 @@ public static class InfrastructureMcp
     [Description("Query derived resource analytics. Properties: Id (int), Timestamp (DateTime), Metric (string), CurrentValue (double), Delta (double), Rate (double), RateDelta (double), IsBreach (bool), Severity (string). Supports structured filters, ordering, and paging.")]
     public static async Task<string> QueryResourceAnalytics(QueryRequest request)
     {
-        using var db = new AnalyticsDbContext();
-        var results = await QueryHelper.ExecuteAsync(db.ResourceAnalytics, request);
-        return JsonSerializer.Serialize(results);
+        return await InfrastructureTools.QueryResourceAnalytics(request);
     }
 
     // ── Prompt ───────────────────────────────────────────────────────────

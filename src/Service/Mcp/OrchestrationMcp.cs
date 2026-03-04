@@ -1,9 +1,7 @@
 using System.ComponentModel;
 using ModelContextProtocol.Server;
 using Library.Domain.Models.Queries;
-using Library.Infrastructure.Database;
-using Library.Infrastructure.Query;
-using System.Text.Json;
+using Library.Application.Tooling;
 
 namespace Service.Mcp;
 
@@ -19,9 +17,7 @@ public static class OrchestrationMcp
     [Description("Query orchestration run history. Properties: Id (int), RunId (Guid), StartTime (DateTime). Supports structured filters, ordering, and paging.")]
     public static async Task<string> QueryOrchestrations(QueryRequest request)
     {
-        using var db = new ReportDbContext();
-        var results = await QueryHelper.ExecuteAsync(db.Orchestrations, request);
-        return JsonSerializer.Serialize(results);
+        return await OrchestrationTools.QueryOrchestrations(request);
     }
 
     // ── Prompt ───────────────────────────────────────────────────────────

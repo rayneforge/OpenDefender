@@ -1,9 +1,7 @@
 using System.ComponentModel;
 using ModelContextProtocol.Server;
 using Library.Domain.Models.Queries;
-using Library.Infrastructure.Database;
-using Library.Infrastructure.Query;
-using System.Text.Json;
+using Library.Application.Tooling;
 
 namespace Service.Mcp;
 
@@ -22,27 +20,21 @@ public static class SecurityMcp
     [Description("Query raw security checks. Properties: Id (int), Timestamp (DateTime), CheckType (string), Item (string), Result (string), Value (double), Severity (string). Supports structured filters, ordering, and paging.")]
     public static async Task<string> QuerySecurityChecks(QueryRequest request)
     {
-        using var db = new ReportDbContext();
-        var results = await QueryHelper.ExecuteAsync(db.SecurityChecks, request);
-        return JsonSerializer.Serialize(results);
+        return await SecurityTools.QuerySecurityChecks(request);
     }
 
     [McpServerTool(Name = "query_networking_metrics", Title = "Query Networking Metrics")]
     [Description("Query raw networking metrics. Properties: Id (int), Timestamp (DateTime), Interface (string), Metric (string), Value (double), Status (string). Supports structured filters, ordering, and paging.")]
     public static async Task<string> QueryNetworkingMetrics(QueryRequest request)
     {
-        using var db = new ReportDbContext();
-        var results = await QueryHelper.ExecuteAsync(db.NetworkingMetrics, request);
-        return JsonSerializer.Serialize(results);
+        return await SecurityTools.QueryNetworkingMetrics(request);
     }
 
     [McpServerTool(Name = "query_packet_tracing", Title = "Query Packet Tracing")]
     [Description("Query raw packet tracing captures. Properties: Id (int), Timestamp (DateTime), Interface (string), PacketsCaptured (int), Status (string). Supports structured filters, ordering, and paging.")]
     public static async Task<string> QueryPacketTracing(QueryRequest request)
     {
-        using var db = new ReportDbContext();
-        var results = await QueryHelper.ExecuteAsync(db.PacketTracingMetrics, request);
-        return JsonSerializer.Serialize(results);
+        return await SecurityTools.QueryPacketTracing(request);
     }
 
     // ── Derived analytics ───────────────────────────────────────────────
@@ -51,9 +43,7 @@ public static class SecurityMcp
     [Description("Query derived security analytics. Properties: Id (int), Timestamp (DateTime), CheckType (string), NewIssuesCount (int), IsBreach (bool), Severity (string). Supports structured filters, ordering, and paging.")]
     public static async Task<string> QuerySecurityAnalytics(QueryRequest request)
     {
-        using var db = new AnalyticsDbContext();
-        var results = await QueryHelper.ExecuteAsync(db.SecurityAnalytics, request);
-        return JsonSerializer.Serialize(results);
+        return await SecurityTools.QuerySecurityAnalytics(request);
     }
 
     // ── Prompt ───────────────────────────────────────────────────────────

@@ -1,0 +1,25 @@
+info:
+  name: Drift Check
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: "{{baseUrl}}/agents/anchor/drift-check"
+  auth: inherit
+  params:
+    query:
+      - name: publish
+        value: "false"
+        enabled: true
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: |
+  Detect configuration drift from desired state.
+  Returns DriftCheckResult: DriftDetected, DriftItems, Level, Detail.
+  Set publish=true to also dispatch the result to the task channel.

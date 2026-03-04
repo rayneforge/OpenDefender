@@ -1,0 +1,23 @@
+meta {
+  name: Health Brief
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/agents/anchor/health-brief?publish=false
+  body: none
+  auth: none
+}
+
+params:query {
+  publish: false
+}
+
+docs {
+  Compile the Anchor weekly health brief.
+
+  Returns HealthBriefResult: TopRisks, Changes, OpenItems, Level, Detail.
+
+  Set publish=true to also dispatch the result to the task channel.
+}

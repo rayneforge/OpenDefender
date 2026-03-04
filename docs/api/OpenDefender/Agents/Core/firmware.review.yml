@@ -1,0 +1,25 @@
+info:
+  name: Firmware Review
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{baseUrl}}/agents/core/firmware-review"
+  auth: inherit
+  params:
+    query:
+      - name: publish
+        value: "false"
+        enabled: true
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: |
+  Review kernel version, kptr_restrict, boot time, firmware updates, and disk health.
+  Returns FirmwareReviewResult: KernelVersion, KptrRestrictCompliant, PendingFirmwareUpdates, Flags, Level, Detail.
+  Set publish=true to also dispatch the result to the task channel.

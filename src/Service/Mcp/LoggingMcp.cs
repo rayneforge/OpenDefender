@@ -1,9 +1,7 @@
 using System.ComponentModel;
 using ModelContextProtocol.Server;
 using Library.Domain.Models.Queries;
-using Library.Infrastructure.Database;
-using Library.Infrastructure.Query;
-using System.Text.Json;
+using Library.Application.Tooling;
 
 namespace Service.Mcp;
 
@@ -22,18 +20,14 @@ public static class LoggingMcp
     [Description("Query raw logging pipeline metrics. Properties: Id (int), Timestamp (DateTime), Component (string), Metric (string), Value (double), Status (string). Supports structured filters, ordering, and paging.")]
     public static async Task<string> QueryLoggingMetrics(QueryRequest request)
     {
-        using var db = new ReportDbContext();
-        var results = await QueryHelper.ExecuteAsync(db.LoggingMetrics, request);
-        return JsonSerializer.Serialize(results);
+        return await LoggingTools.QueryLoggingMetrics(request);
     }
 
     [McpServerTool(Name = "query_logging_inventory", Title = "Query Logging Inventory")]
     [Description("Query raw log source inventory. Properties: Id (int), Timestamp (DateTime), LogSource (string), LogType (string), SizeBytes (long), Status (string). Supports structured filters, ordering, and paging.")]
     public static async Task<string> QueryLoggingInventory(QueryRequest request)
     {
-        using var db = new ReportDbContext();
-        var results = await QueryHelper.ExecuteAsync(db.LoggingInventoryMetrics, request);
-        return JsonSerializer.Serialize(results);
+        return await LoggingTools.QueryLoggingInventory(request);
     }
 
     // ── Derived analytics ───────────────────────────────────────────────
@@ -42,9 +36,7 @@ public static class LoggingMcp
     [Description("Query derived ledger analytics. Properties: Id (int), Timestamp (DateTime), LogSource (string), LogType (string), CurrentSizeBytes (long), GrowthBytes (long), GrowthRateBytesPerHour (double), IsRetentionCompliant (bool), RetentionDays (double), GapDetected (bool), ShippingBacklog (double), IsBacklogBreach (bool). Supports structured filters, ordering, and paging.")]
     public static async Task<string> QueryLedgerAnalytics(QueryRequest request)
     {
-        using var db = new AnalyticsDbContext();
-        var results = await QueryHelper.ExecuteAsync(db.LedgerAnalytics, request);
-        return JsonSerializer.Serialize(results);
+        return await LoggingTools.QueryLedgerAnalytics(request);
     }
 
     // ── Prompt ───────────────────────────────────────────────────────────

@@ -5,9 +5,14 @@
 			"command": "dotnet",
 			"args": [
 				"run",
+				"--no-launch-profile",
 				"--project",
 				"${workspaceFolder}/src/Service/Service.csproj"
-			]
+			],
+			"env": {
+				"ASPNETCORE_ENVIRONMENT": "Development",
+				"Service__TransportType": "Stdio"
+			}
 		}
 	},
 	"inputs": []

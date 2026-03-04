@@ -1,9 +1,7 @@
 using System.ComponentModel;
 using ModelContextProtocol.Server;
 using Library.Domain.Models.Queries;
-using Library.Infrastructure.Database;
-using Library.Infrastructure.Query;
-using System.Text.Json;
+using Library.Application.Tooling;
 
 namespace Service.Mcp;
 
@@ -22,36 +20,28 @@ public static class ReliabilityMcp
     [Description("Query raw data-recovery / backup metrics. Properties: Id (int), Timestamp (DateTime), Source (string), Status (string), SizeBytes (long). Supports structured filters, ordering, and paging.")]
     public static async Task<string> QueryDataRecovery(QueryRequest request)
     {
-        using var db = new ReportDbContext();
-        var results = await QueryHelper.ExecuteAsync(db.DataRecoveryMetrics, request);
-        return JsonSerializer.Serialize(results);
+        return await ReliabilityTools.QueryDataRecovery(request);
     }
 
     [McpServerTool(Name = "query_service_metrics", Title = "Query Service Metrics")]
     [Description("Query raw service health metrics. Properties: Id (int), Timestamp (DateTime), Service (string), Status (string), UptimeSeconds (double). Supports structured filters, ordering, and paging.")]
     public static async Task<string> QueryServiceMetrics(QueryRequest request)
     {
-        using var db = new ReportDbContext();
-        var results = await QueryHelper.ExecuteAsync(db.ServiceMetrics, request);
-        return JsonSerializer.Serialize(results);
+        return await ReliabilityTools.QueryServiceMetrics(request);
     }
 
     [McpServerTool(Name = "query_control_map", Title = "Query Control Map Metrics")]
     [Description("Query raw control-map entries. Properties: Id (int), Timestamp (DateTime), Layer (string), Status (string), Signal (string), ActionRequired (string). Supports structured filters, ordering, and paging.")]
     public static async Task<string> QueryControlMap(QueryRequest request)
     {
-        using var db = new ReportDbContext();
-        var results = await QueryHelper.ExecuteAsync(db.ControlMapMetrics, request);
-        return JsonSerializer.Serialize(results);
+        return await ReliabilityTools.QueryControlMap(request);
     }
 
     [McpServerTool(Name = "query_automation_metrics", Title = "Query Automation Metrics")]
     [Description("Query raw automation / CI-CD metrics. Properties: Id (int), Timestamp (DateTime), Tool (string), Job (string), Result (string). Supports structured filters, ordering, and paging.")]
     public static async Task<string> QueryAutomationMetrics(QueryRequest request)
     {
-        using var db = new ReportDbContext();
-        var results = await QueryHelper.ExecuteAsync(db.AutomationMetrics, request);
-        return JsonSerializer.Serialize(results);
+        return await ReliabilityTools.QueryAutomationMetrics(request);
     }
 
     // ── Derived analytics ───────────────────────────────────────────────
@@ -60,9 +50,7 @@ public static class ReliabilityMcp
     [Description("Query derived reliability analytics. Properties: Id (int), Timestamp (DateTime), Scope (string), Entity (string), StatusChange (string), IsDegraded (bool), GapDetected (bool). Supports structured filters, ordering, and paging.")]
     public static async Task<string> QueryReliabilityAnalytics(QueryRequest request)
     {
-        using var db = new AnalyticsDbContext();
-        var results = await QueryHelper.ExecuteAsync(db.ReliabilityAnalytics, request);
-        return JsonSerializer.Serialize(results);
+        return await ReliabilityTools.QueryReliabilityAnalytics(request);
     }
 
     // ── Prompt ───────────────────────────────────────────────────────────
