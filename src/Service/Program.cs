@@ -4,15 +4,17 @@ using Library.Domain.Abstractions;
 using Library.Domain.Models.State;
 using Library.Infrastructure.Database;
 using Library.Infrastructure.MessageBus;
-using Microsoft.AspNetCore.OData;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
-using ModelContextProtocol.AspNetCore;
-using Service;
+
 using Service.Services;
 
 // Resolve bundled configuration independently of the MCP client's working directory.
 var environment = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
-    ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
+    ?? "Production";
 var configuration = new ConfigurationBuilder()
     .SetBasePath(AppContext.BaseDirectory)
     .AddJsonFile("appsettings.json", optional: true)
@@ -21,15 +23,10 @@ var configuration = new ConfigurationBuilder()
     .AddCommandLine(args)
     .Build();
 var serviceOptions = configuration.GetSection(ServiceOptions.SectionName).Get<ServiceOptions>() ?? new();
-var stdio = string.Equals(serviceOptions.TransportType, "Stdio", StringComparison.OrdinalIgnoreCase);
-if (!stdio && !string.Equals(serviceOptions.TransportType, "Http", StringComparison.OrdinalIgnoreCase))
-    throw new ArgumentException("Service:TransportType must be Stdio or Http.");
+if (!string.Equals(serviceOptions.TransportType, "Stdio", StringComparison.OrdinalIgnoreCase))
+    throw new ArgumentException("OpenDefender supports only Stdio. HTTP transport has been removed.");
 
-WebApplicationBuilder? webBuilder = stdio ? null : WebApplication.CreateBuilder(new WebApplicationOptions
-{
-    Args = args, ContentRootPath = AppContext.BaseDirectory, EnvironmentName = environment
-});
-IHostApplicationBuilder builder = webBuilder is not null ? webBuilder : Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
+var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
 {
     Args = args, ContentRootPath = AppContext.BaseDirectory, EnvironmentName = environment
 });
@@ -40,9 +37,7 @@ builder.Services.Configure<ServiceOptions>(builder.Configuration.GetSection(Serv
 // stdout belongs exclusively to the MCP transport.
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole(options => options.LogToStandardErrorThreshold = LogLevel.Trace);
-var mcp = builder.Services.AddMcpServer().WithToolsFromAssembly().WithPromptsFromAssembly();
-if (stdio) mcp.WithStdioServerTransport();
-else mcp.WithHttpTransport();
+builder.Services.AddMcpServer().WithStdioServerTransport().WithToolsFromAssembly().WithPromptsFromAssembly();
 
 builder.Services.AddDbContext<ReportDbContext>();
 builder.Services.AddDbContext<AnalyticsDbContext>();
@@ -60,18 +55,6 @@ if (llmEnabled)
     builder.Services.AddTransient<LedgerAgent>();
 }
 
-if (webBuilder is not null)
-{
-    builder.Services.AddOpenApi();
-    var controllers = builder.Services.AddControllers().AddOData(options => options
-        .Count().Filter().Expand().Select().OrderBy().SetMaxTop(100)
-        .AddRouteComponents("odata/metrics", EdmModelBuilder.GetReportModel())
-        .AddRouteComponents("odata/analytics", EdmModelBuilder.GetAnalyticsModel()));
-    if (!llmEnabled)
-        controllers.ConfigureApplicationPartManager(manager =>
-            manager.FeatureProviders.Add(new AgentControllerExclusionProvider()));
-}
-
 var channel = new TaskChannel();
 builder.Services.AddSingleton(channel);
 builder.Services.AddSingleton<ITaskChannel>(channel);
@@ -84,18 +67,11 @@ builder.Services.AddSingleton(TaskRegistry.Build(
 builder.Services.AddHostedService<TaskSchedulerService>();
 builder.Services.AddHostedService<TaskDispatcherService>();
 
-using IHost host = webBuilder is not null ? webBuilder.Build() : ((HostApplicationBuilder)builder).Build();
+using IHost host = builder.Build();
 using (var scope = host.Services.CreateScope())
 {
     await scope.ServiceProvider.GetRequiredService<ReportDbContext>().Database.EnsureCreatedAsync();
     await scope.ServiceProvider.GetRequiredService<AnalyticsDbContext>().Database.EnsureCreatedAsync();
 }
 // The scheduler starts collection without delaying the MCP initialize handshake.
-if (host is WebApplication app)
-{
-    if (app.Environment.IsDevelopment()) app.MapOpenApi();
-    app.UseHttpsRedirection();
-    app.MapControllers();
-    app.MapMcp("/mcp");
-}
 await host.RunAsync();
