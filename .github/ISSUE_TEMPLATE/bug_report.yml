@@ -1,0 +1,27 @@
+name: Bug report
+description: Report a setup, collection, or MCP problem with sanitized evidence.
+body:
+  - type: markdown
+    attributes:
+      value: For vulnerabilities, use private security reporting. Do not include credentials, private addresses, or unredacted telemetry.
+  - type: input
+    id: environment
+    attributes:
+      label: Version and environment
+      description: Package version, OS, architecture, and MCP client.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction and expected behavior
+      description: Include the setup path and steps. Was this run as an ordinary account?
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Actual behavior and sanitized evidence
+      description: Include relevant errors without secrets or identifying device data.
+    validations:
+      required: true

@@ -1,0 +1,15 @@
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: /src
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      dotnet-patches:
+        patterns: ["Microsoft.EntityFrameworkCore*", "Microsoft.AspNetCore.OpenApi"]
+        update-types: ["patch"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

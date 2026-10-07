@@ -22,7 +22,7 @@ public class DiagnosticProducer
     }
 
     [TaskTrigger("diagnostic_collection", "Collect all system diagnostics and persist raw metrics.", "00:15:00")]
-    public async Task<OrchestrationState> RunAsync()
+    public async Task<OrchestrationState> RunAsync(CancellationToken ct = default)
     {
         var state = new OrchestrationState
         {
@@ -31,9 +31,9 @@ public class DiagnosticProducer
         };
 
         var since = DateTime.UtcNow.AddHours(-_options.LookbackHours);
-        var orchestrator = new DiagnosticOrchestrator(since: since);
+        var orchestrator = new DiagnosticOrchestrator(since: since, enablePacketCapture: _options.EnablePacketCapture);
 
-        await orchestrator.RunAsync(state);
+        await orchestrator.RunAsync(state, ct);
 
         return state;
     }

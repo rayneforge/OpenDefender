@@ -14,7 +14,7 @@ public class HardwareCollector : ShellCollector<HardwareMetric>
     {
         // Normalize to pipe-delimited: Device|Attribute|Value|Status
         return @"
-            SMART=$(sudo smartctl -A /dev/nvme0n1 2>/dev/null);
+            SMART=$(smartctl -A /dev/nvme0n1 2>/dev/null);
             TEMP=$(echo ""$SMART"" | grep -i 'Temperature:' | head -1 | grep -oP '[0-9]+' | head -1);
             PCT=$(echo ""$SMART"" | grep -i 'Percentage Used' | grep -oP '[0-9]+' | head -1);
             SPARE=$(echo ""$SMART"" | grep -i 'Available Spare:' | grep -oP '[0-9]+' | head -1);

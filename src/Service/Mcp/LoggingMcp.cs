@@ -16,14 +16,14 @@ public static class LoggingMcp
 {
     // ── Raw metrics ─────────────────────────────────────────────────────
 
-    [McpServerTool(Name = "query_logging_metrics", Title = "Query Logging Metrics")]
+    [McpServerTool(Name = "query_logging_metrics", Title = "Query Logging Metrics", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
     [Description("Query raw logging pipeline metrics. Properties: Id (int), Timestamp (DateTime), Component (string), Metric (string), Value (double), Status (string). Supports structured filters, ordering, and paging.")]
     public static async Task<string> QueryLoggingMetrics(QueryRequest request)
     {
         return await LoggingTools.QueryLoggingMetrics(request);
     }
 
-    [McpServerTool(Name = "query_logging_inventory", Title = "Query Logging Inventory")]
+    [McpServerTool(Name = "query_logging_inventory", Title = "Query Logging Inventory", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
     [Description("Query raw log source inventory. Properties: Id (int), Timestamp (DateTime), LogSource (string), LogType (string), SizeBytes (long), Status (string). Supports structured filters, ordering, and paging.")]
     public static async Task<string> QueryLoggingInventory(QueryRequest request)
     {
@@ -32,7 +32,7 @@ public static class LoggingMcp
 
     // ── Derived analytics ───────────────────────────────────────────────
 
-    [McpServerTool(Name = "query_ledger_analytics", Title = "Query Ledger Analytics")]
+    [McpServerTool(Name = "query_ledger_analytics", Title = "Query Ledger Analytics", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
     [Description("Query derived ledger analytics. Properties: Id (int), Timestamp (DateTime), LogSource (string), LogType (string), CurrentSizeBytes (long), GrowthBytes (long), GrowthRateBytesPerHour (double), IsRetentionCompliant (bool), RetentionDays (double), GapDetected (bool), ShippingBacklog (double), IsBacklogBreach (bool). Supports structured filters, ordering, and paging.")]
     public static async Task<string> QueryLedgerAnalytics(QueryRequest request)
     {

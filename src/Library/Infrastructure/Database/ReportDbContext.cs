@@ -27,11 +27,10 @@ public class ReportDbContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        var dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ".data", "diagnostic_reports.db");
-        var directory = Path.GetDirectoryName(dbPath);
-        if (directory != null && !Directory.Exists(directory)) 
-            Directory.CreateDirectory(directory);
-
-        optionsBuilder.UseSqlite($"Data Source={dbPath}");
+        var connection = new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder
+        {
+            DataSource = DatabasePaths.GetPath("diagnostic_reports.db")
+        };
+        optionsBuilder.UseSqlite(connection.ConnectionString);
     }
 }

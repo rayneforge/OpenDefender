@@ -18,8 +18,8 @@ public class SecurityCollector : ShellCollector<SecurityCheck>
             : "--since '24 hours ago'";
 
         return $@"
-            echo ""Firewall|Status|$(sudo ufw status 2>/dev/null | grep 'Status: active' >/dev/null && echo 'Active' || echo 'Inactive')|$(sudo ufw status 2>/dev/null | grep -c 'Status: active')|Medium"";
-            echo ""Network|OpenPorts|Count|$(sudo ss -tulpn 2>/dev/null | grep LISTEN | wc -l)|Low"";
+            echo ""Firewall|Status|$(ufw status 2>/dev/null | grep 'Status: active' >/dev/null && echo 'Active' || echo 'Inactive')|$(ufw status 2>/dev/null | grep -c 'Status: active')|Medium"";
+            echo ""Network|OpenPorts|Count|$(ss -tulpn 2>/dev/null | grep LISTEN | wc -l)|Low"";
             echo ""Auth|FailedLogins|Count|$(journalctl _COMM=sshd {sinceArg} 2>/dev/null | grep -c 'Failed password')|High"";
         ";
     }

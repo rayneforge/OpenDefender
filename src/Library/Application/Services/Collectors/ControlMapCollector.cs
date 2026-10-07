@@ -17,7 +17,7 @@ public class ControlMapCollector : ShellCollector<ControlMapMetric>
         return @"
             echo ""Hardware|$(sensors 2>/dev/null | grep -q 'Package' && echo 'OK' || echo 'Degraded')|ThermalCheck"";
             echo ""Kernel|OK|$(uname -r)"";
-            echo ""Security|$(sudo ss -tulpn 2>/dev/null | grep -c LISTEN) open ports|PortScan"";
+            echo ""Security|$(ss -tulpn 2>/dev/null | grep -c LISTEN) open ports|PortScan"";
             echo ""GPU|$(nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader 2>/dev/null || echo 'N/A')|GpuCheck"";
             echo ""Automation|$(systemctl list-timers --no-legend 2>/dev/null | wc -l) timers|TimerCheck"";
         ";

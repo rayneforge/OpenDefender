@@ -18,6 +18,7 @@ public static class SecurityTools
     {
         yield return AIFunctionFactory.Create(QuerySecurityChecks, "query_security_checks", "Query raw security checks. Properties: Id (int), Timestamp (DateTime), CheckType (string), Item (string), Result (string), Value (double), Severity (string). Supports structured filters, ordering, and paging.");
         yield return AIFunctionFactory.Create(QueryNetworkingMetrics, "query_networking_metrics", "Query raw networking metrics. Properties: Id (int), Timestamp (DateTime), Interface (string), Metric (string), Value (double), Status (string). Supports structured filters, ordering, and paging.");
+        yield return AIFunctionFactory.Create(QueryNetworkConnections, "query_network_connections", "Read a live TCP connection snapshot: local and remote addresses, ports, and state. No packet payload or snapshot is stored. Empty results do not prove absence of traffic; UDP and past connections are outside scope.");
         yield return AIFunctionFactory.Create(QueryPacketTracing, "query_packet_tracing", "Query raw packet tracing captures. Properties: Id (int), Timestamp (DateTime), Interface (string), PacketsCaptured (int), Status (string). Supports structured filters, ordering, and paging.");
         yield return AIFunctionFactory.Create(QuerySecurityAnalytics, "query_security_analytics", "Query derived security analytics. Properties: Id (int), Timestamp (DateTime), CheckType (string), NewIssuesCount (int), IsBreach (bool), Severity (string). Supports structured filters, ordering, and paging.");
     }
@@ -40,6 +41,13 @@ public static class SecurityTools
     {
         using var db = new ReportDbContext();
         var results = await QueryHelper.ExecuteAsync(db.PacketTracingMetrics, request);
+        return JsonSerializer.Serialize(results);
+    }
+
+    public static async Task<string> QueryNetworkConnections(QueryRequest request, CancellationToken ct = default)
+    {
+        var snapshot = await new Library.Application.Services.Collectors.NetworkConnectionCollector().CollectAsync(ct: ct);
+        var results = QueryHelper.Apply(snapshot.AsQueryable(), request).ToList();
         return JsonSerializer.Serialize(results);
     }
 

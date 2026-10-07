@@ -13,7 +13,7 @@ namespace Service.Mcp;
 [McpServerPromptType]
 public static class OrchestrationMcp
 {
-    [McpServerTool(Name = "query_orchestrations", Title = "Query Orchestration History")]
+    [McpServerTool(Name = "query_orchestrations", Title = "Query Orchestration History", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
     [Description("Query orchestration run history. Properties: Id (int), RunId (Guid), StartTime (DateTime). Supports structured filters, ordering, and paging.")]
     public static async Task<string> QueryOrchestrations(QueryRequest request)
     {

@@ -7,7 +7,10 @@ public class ServiceOptions
     /// <summary>
     /// Preferred communication mode: "Stdio" (MCP pattern) or "Http" (Rest API)
     /// </summary>
-    public string TransportType { get; set; } = "Http";
+    public string TransportType { get; set; } = "Stdio";
+
+    /// <summary>Opt in to packet capture using only permissions already held by the process.</summary>
+    public bool EnablePacketCapture { get; set; }
 
     /// <summary>
     /// Frequency of background diagnostic collection (e.g. "00:05:00" for 5 minutes)
