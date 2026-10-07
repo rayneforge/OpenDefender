@@ -32,6 +32,7 @@ not claims about current capabilities.
    and add provenance, and keep dependencies patched. Extend to ARM64 only after
    testing on representative devices.
 
-Automatic fixes, broad administrative privileges, remote shell access, packet
-payload storage, and public unauthenticated HTTP are outside the default design.
+7. **Storage privacy.** Enforce private data-directory permissions on each OS, define encryption requirements, and document deletion limits for SQLite pages, WAL files, backups, and client history. Add a storage size limit and validate retention while running and after restarts.
 
+Automatic fixes, broad administrative privileges, remote shell access, packet
+payload storage, and HTTP transport are outside the supported design.
