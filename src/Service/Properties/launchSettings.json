@@ -1,32 +1,11 @@
 {
   "$schema": "https://json.schemastore.org/launchsettings.json",
   "profiles": {
-    "http": {
-      "commandName": "Project",
-      "dotnetRunMessages": true,
-      "launchBrowser": false,
-      "applicationUrl": "http://localhost:5297",
-      "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development",
-        "Service__TransportType": "Http"
-      }
-    },
-    "https": {
-      "commandName": "Project",
-      "dotnetRunMessages": true,
-      "launchBrowser": false,
-      "applicationUrl": "https://localhost:7172;http://localhost:5297",
-      "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development",
-        "Service__TransportType": "Http"
-      }
-    },
     "stdio": {
       "commandName": "Project",
       "dotnetRunMessages": false,
       "environmentVariables": {
-        "DOTNET_ENVIRONMENT": "Development",
-        "Service__TransportType": "Stdio"
+        "DOTNET_ENVIRONMENT": "Development"
       }
     }
   }

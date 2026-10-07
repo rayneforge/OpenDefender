@@ -1,3 +1,5 @@
+> OpenDefender itself supports stdio only. HTTP fixtures and examples below test external MCP servers; they do not enable an OpenDefender HTTP endpoint.
+
 # MCP + Microsoft.Extensions.AI Testing
 
 This document shows a clean xUnit setup that supports:
@@ -493,4 +495,3 @@ The fixture auto-probes the endpoint on startup (401 → RFC 9728 resource metad
 - Configurable endpoint via `MCP_HTTP_ENDPOINT` (local service or remote like `learn.microsoft.com/api/mcp`)
 - Use `McpEvaluationFixture` (works with any Ollama model — no Azure required) for rubric-based quality assertions
 - No mocks
-

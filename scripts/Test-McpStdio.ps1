@@ -26,7 +26,7 @@ function Read-Response($Process, [int]$Id) {
     }
     return $response
 }
-foreach ($mode in @('default', 'stdio')) {
+foreach ($mode in @('default', 'stdio', 'legacy-urls')) {
     $psi = [System.Diagnostics.ProcessStartInfo]::new()
     if ($PackageDirectory) {
         $psi.FileName = 'dotnet'
@@ -42,6 +42,7 @@ foreach ($mode in @('default', 'stdio')) {
     $psi.RedirectStandardError = $true
     $psi.Environment.Remove('Service__TransportType') | Out-Null
     if ($mode -eq 'stdio') { $psi.Environment['Service__TransportType'] = 'stdio' }
+    if ($mode -eq 'legacy-urls') { $psi.Environment['ASPNETCORE_URLS'] = 'http://0.0.0.0:5297'; $psi.ArgumentList.Add('--urls=http://0.0.0.0:5297') }
     $dataDirectory = Join-Path $testRoot "data-$mode"
     $psi.Environment['OPENDEFENDER_DATA_DIR'] = $dataDirectory
     $process = [System.Diagnostics.Process]::new()
@@ -52,6 +53,10 @@ foreach ($mode in @('default', 'stdio')) {
         $stderr = $process.StandardError.ReadToEndAsync()
         $process.StandardInput.WriteLine('{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"stdio-smoke","version":"1"}}}')
         $initialize = Read-Response $process 1
+        if ($IsWindows) {
+            $listeners = @(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object OwningProcess -eq $process.Id)
+            if ($listeners.Count) { throw 'Stdio process opened a TCP listener' }
+        }
         if (-not $initialize.result.capabilities.tools) { throw 'Missing tools capability' }
         $process.StandardInput.WriteLine('{"jsonrpc":"2.0","method":"notifications/initialized"}')
         $process.StandardInput.WriteLine('{"jsonrpc":"2.0","id":2,"method":"tools/list"}')
@@ -86,6 +91,26 @@ foreach ($mode in @('default', 'stdio')) {
         if (-not $process.HasExited) { $process.Kill($true); $process.WaitForExit() }
         if ($stderr) { Write-Output ($stderr.Result -split "`n" | Select-Object -Last 15) }
         throw
+    } finally {
+        if (-not $process.HasExited) { $process.Kill($true); $process.WaitForExit() }
+        $process.Dispose()
+    }
+}
+
+# Both historical configuration entry points must fail before starting a host.
+foreach ($source in @('environment', 'command-line')) {
+    $psi.Environment.Remove('ASPNETCORE_URLS') | Out-Null
+    $psi.Environment['Service__TransportType'] = if ($source -eq 'environment') { 'Http' } else { 'Stdio' }
+    if ($source -eq 'command-line') { $psi.ArgumentList.Add('--Service:TransportType=Http') }
+    $process = [System.Diagnostics.Process]::Start($psi)
+    $stderr = $process.StandardError.ReadToEndAsync()
+    $stdout = $process.StandardOutput.ReadToEndAsync()
+    try {
+        $process.StandardInput.Close()
+        if (-not $process.WaitForExit(10000)) { throw 'Legacy HTTP setting did not exit promptly' }
+        if ($process.ExitCode -eq 0 -or $stderr.Result -notmatch 'supports only Stdio') { throw 'Legacy HTTP setting was not rejected' }
+        if ($stdout.Result.Trim()) { throw 'Unexpected stdout when rejecting HTTP' }
+        Write-Output "PASS HTTP $source setting rejected"
     } finally {
         if (-not $process.HasExited) { $process.Kill($true); $process.WaitForExit() }
         $process.Dispose()

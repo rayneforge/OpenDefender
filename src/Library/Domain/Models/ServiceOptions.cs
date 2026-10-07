@@ -5,7 +5,7 @@ public class ServiceOptions
     public const string SectionName = "Service";
 
     /// <summary>
-    /// Preferred communication mode: "Stdio" (MCP pattern) or "Http" (Rest API)
+    /// Only supported communication mode: "Stdio". Other values are rejected.
     /// </summary>
     public string TransportType { get; set; } = "Stdio";
 
@@ -84,4 +84,3 @@ public class AzureOpenAiOptions
     public string ApiKey { get; set; } = "";
     public string AuthenticationStrategy { get; set; } = "ApiKey";
 }
-

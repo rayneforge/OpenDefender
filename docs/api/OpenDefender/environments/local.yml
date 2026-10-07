@@ -1,9 +1,0 @@
-info:
-  name: Local
-
-variables:
-  - name: baseUrl
-    value: http://localhost:5297
-    enabled: true
-    secret: false
-    type: default

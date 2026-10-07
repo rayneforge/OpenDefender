@@ -88,11 +88,11 @@ The connection tool can show connected peers and listeners. It does not reconstr
 
 Run as an ordinary user. OpenDefender does not request elevation, invoke `sudo`, change firewall rules, restart services, install system utilities, or execute agent-supplied shell commands. Collectors run fixed OS probes. MCP tools query telemetry or inspect current TCP endpoints. All tools advertise read-only, non-destructive, local behavior; these annotations describe behavior and are not a security sandbox.
 
-Stdio is the default: the MCP client starts a child process and talks over stdin/stdout. No HTTP listener or built-in LLM is required. Logs go to stderr.
+Stdio is the only transport: the MCP client starts a child process and talks over stdin/stdout. The executable has no HTTP host or API routes. No built-in LLM is required. Logs go to stderr.
 
 Packet sampling is optional and off by default. The existing Linux `tcpdump` probe retains only a count, not packets, and requires permissions already granted to the process. Set `Service__EnablePacketCapture=true` only if you intend to enable that probe. On Windows the corresponding probe is a connection-count proxy. The live connection tool is available without this option.
 
-Saved telemetry uses `%LOCALAPPDATA%/OpenDefender` on Windows, normally `~/.local/share/OpenDefender` on Linux. Override with `OPENDEFENDER_DATA_DIR`. Default telemetry retention is two hours, with a purge scheduled every thirty minutes. Live connection snapshots are not stored. Older `.data` databases are not moved automatically.
+Saved telemetry uses `%LOCALAPPDATA%/OpenDefender` on Windows, normally `~/.local/share/OpenDefender` on Linux. Override with `OPENDEFENDER_DATA_DIR`. Default telemetry retention is two hours, with a purge scheduled every thirty minutes. Live connection snapshots are not stored. SQLite files are unencrypted; retention deletes rows but does not guarantee physical erasure, removal from backups, or shrinking files. Purges run only while the service is running. Older `.data` databases are not moved automatically.
 
 Telemetry can contain host details, addresses, and service names. Your MCP client or its AI provider can receive tool results. Review that client's data handling before connecting a sensitive machine. OpenDefender does not upload snapshots itself in the default configuration. Optional built-in LLM agents can send telemetry to a provider if you explicitly configure `Service:Llm`.
 
@@ -131,17 +131,11 @@ dotnet pack src/Service/Service.csproj -c Release -o publish/nupkg -p:Version=1.
 
 Use a fresh validation version after each package change to avoid reusing a cached package. CI builds both OS targets, runs their platform tests, and checks the standalone and packaged stdio paths. Manual dispatch publishes release assets and NuGet packages.
 
-HTTP/OData is an explicit development option, without built-in access control. Keep it on localhost:
-
-```bash
-dotnet run --project src/Service/Service.csproj --no-launch-profile -- --Service:TransportType=Http --urls=http://127.0.0.1:5000
-```
-
-The MCP route is `/mcp`. Raw metrics are under `/odata/metrics` and analytics under `/odata/analytics`. Optional configuration is read beside the executable; environment variables and command-line arguments override it.
+Optional configuration is read beside the executable; environment variables and command-line arguments override it. Legacy HTTP transport settings are rejected.
 
 ## Project layout
 
-- `src/Service`: MCP tools/prompts, optional HTTP API, and background services.
+- `src/Service`: Stdio MCP tools/prompts and background services.
 - `src/Library`: fixed collectors, typed models, query helpers, SQLite storage, and optional built-in agents.
 - `src/Tests`: platform probes, parsing/process checks, and separate LLM evaluations.
 - `.github/agents`: optional Copilot roles for security, reliability, device health, and logging.

@@ -7,7 +7,7 @@ updates:
     open-pull-requests-limit: 5
     groups:
       dotnet-patches:
-        patterns: ["Microsoft.EntityFrameworkCore*", "Microsoft.AspNetCore.OpenApi"]
+        patterns: ["Microsoft.EntityFrameworkCore*", "Microsoft.Extensions.Hosting"]
         update-types: ["patch"]
   - package-ecosystem: github-actions
     directory: /
