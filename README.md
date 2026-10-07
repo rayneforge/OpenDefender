@@ -1,5 +1,7 @@
 # OpenDefender
 
+![OpenDefender: an AI emblem connected to security, performance, and system internals](docs/assets/opendefender-banner.png)
+
 Read-only MCP tools that help an AI agent explain security and system health on a Windows device or Linux home server.
 
 OpenDefender gives your existing AI assistant structured observations about the machine it runs on. Ask what is listening, which remote addresses are connected, whether the firewall is enabled, or which services need attention. The assistant explains the evidence and suggests a next step; you stay in control of changes.
