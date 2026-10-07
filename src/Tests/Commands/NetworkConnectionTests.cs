@@ -12,6 +12,7 @@ public class NetworkConnectionTests
     [InlineData("tcp ESTAB 0 0 [2001:db8::1]:51000 [2001:db8::2]:443", "2001:db8::1", 51000, "2001:db8::2", 443, "Established")]
     [InlineData("LISTEN 0 128 [::]:22 [::]:*", "::", 22, "::", null, "Listen")]
     [InlineData("Established|127.0.0.1|50000|127.0.0.1|8080", "127.0.0.1", 50000, "127.0.0.1", 8080, "Established")]
+    [InlineData("ESTAB 0 0 [::ffff:127.0.0.1]:51000 [::ffff:127.0.0.1]:443", "127.0.0.1", 51000, "127.0.0.1", 443, "Established")]
     public void ParsesEndpoints(string raw, string local, int localPort, string remote, int? remotePort, string state)
     {
         var timestamp = DateTime.UtcNow;
@@ -44,7 +45,7 @@ public class NetworkConnectionTests
         using var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
         var port = ((IPEndPoint)listener.LocalEndpoint).Port;
-        using var client = new TcpClient();
+        using var client = new TcpClient(AddressFamily.InterNetwork);
         await client.ConnectAsync(IPAddress.Loopback, port, timeout.Token);
         using var server = await listener.AcceptTcpClientAsync(timeout.Token);
         var connections = (await new NetworkConnectionCollector().CollectAsync(ct: timeout.Token)).ToList();

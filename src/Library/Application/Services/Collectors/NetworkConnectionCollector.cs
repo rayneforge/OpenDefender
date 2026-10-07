@@ -54,8 +54,8 @@ public sealed class NetworkConnectionCollector : ShellCollector<NetworkConnectio
             result.Add(new NetworkConnectionMetric
             {
                 Timestamp = collectedAt, State = state,
-                LocalAddress = localAddress, LocalPort = localPort,
-                RemoteAddress = remoteAddress, RemotePort = remotePort
+                LocalAddress = NormalizeAddress(localAddress), LocalPort = localPort,
+                RemoteAddress = NormalizeAddress(remoteAddress), RemotePort = remotePort
             });
         }
         return result;
@@ -70,4 +70,8 @@ public sealed class NetworkConnectionCollector : ShellCollector<NetworkConnectio
 
     private static int? ParsePort(string value) => value == "*" ? null
         : int.Parse(value, NumberStyles.Integer, CultureInfo.InvariantCulture);
+
+    private static string NormalizeAddress(string value)
+        => System.Net.IPAddress.TryParse(value, out var address) && address.IsIPv4MappedToIPv6
+            ? address.MapToIPv4().ToString() : value;
 }
