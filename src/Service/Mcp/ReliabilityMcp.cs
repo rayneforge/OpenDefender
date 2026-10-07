@@ -16,28 +16,28 @@ public static class ReliabilityMcp
 {
     // ── Raw metrics ─────────────────────────────────────────────────────
 
-    [McpServerTool(Name = "query_data_recovery", Title = "Query Data Recovery Metrics")]
+    [McpServerTool(Name = "query_data_recovery", Title = "Query Data Recovery Metrics", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
     [Description("Query raw data-recovery / backup metrics. Properties: Id (int), Timestamp (DateTime), Source (string), Status (string), SizeBytes (long). Supports structured filters, ordering, and paging.")]
     public static async Task<string> QueryDataRecovery(QueryRequest request)
     {
         return await ReliabilityTools.QueryDataRecovery(request);
     }
 
-    [McpServerTool(Name = "query_service_metrics", Title = "Query Service Metrics")]
+    [McpServerTool(Name = "query_service_metrics", Title = "Query Service Metrics", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
     [Description("Query raw service health metrics. Properties: Id (int), Timestamp (DateTime), Service (string), Status (string), UptimeSeconds (double). Supports structured filters, ordering, and paging.")]
     public static async Task<string> QueryServiceMetrics(QueryRequest request)
     {
         return await ReliabilityTools.QueryServiceMetrics(request);
     }
 
-    [McpServerTool(Name = "query_control_map", Title = "Query Control Map Metrics")]
+    [McpServerTool(Name = "query_control_map", Title = "Query Control Map Metrics", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
     [Description("Query raw control-map entries. Properties: Id (int), Timestamp (DateTime), Layer (string), Status (string), Signal (string), ActionRequired (string). Supports structured filters, ordering, and paging.")]
     public static async Task<string> QueryControlMap(QueryRequest request)
     {
         return await ReliabilityTools.QueryControlMap(request);
     }
 
-    [McpServerTool(Name = "query_automation_metrics", Title = "Query Automation Metrics")]
+    [McpServerTool(Name = "query_automation_metrics", Title = "Query Automation Metrics", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
     [Description("Query raw automation / CI-CD metrics. Properties: Id (int), Timestamp (DateTime), Tool (string), Job (string), Result (string). Supports structured filters, ordering, and paging.")]
     public static async Task<string> QueryAutomationMetrics(QueryRequest request)
     {
@@ -46,7 +46,7 @@ public static class ReliabilityMcp
 
     // ── Derived analytics ───────────────────────────────────────────────
 
-    [McpServerTool(Name = "query_reliability_analytics", Title = "Query Reliability Analytics")]
+    [McpServerTool(Name = "query_reliability_analytics", Title = "Query Reliability Analytics", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
     [Description("Query derived reliability analytics. Properties: Id (int), Timestamp (DateTime), Scope (string), Entity (string), StatusChange (string), IsDegraded (bool), GapDetected (bool). Supports structured filters, ordering, and paging.")]
     public static async Task<string> QueryReliabilityAnalytics(QueryRequest request)
     {

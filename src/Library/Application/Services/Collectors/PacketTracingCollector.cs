@@ -18,7 +18,7 @@ public class PacketTracingCollector : ShellCollector<PacketTracingMetric>
 
     protected override string BuildLinuxCommand(DateTime? since)
     {
-        return $"sudo timeout {_captureSeconds}s tcpdump -i any -c 20 -q 2>/dev/null | wc -l";
+        return $"timeout {_captureSeconds}s tcpdump -i any -c 20 -q 2>/dev/null | wc -l";
     }
 
     protected override string BuildWindowsCommand(DateTime? since)

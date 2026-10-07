@@ -1,0 +1,17 @@
+name: Feature request
+description: Suggest evidence that would help an owner understand their device.
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: What question should the agent help answer?
+      description: Describe the user and device or home-server situation.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence, permissions, and privacy
+      description: What should be read, on which operating systems, and what should be retained? Prefer ordinary user permissions.
+    validations:
+      required: true

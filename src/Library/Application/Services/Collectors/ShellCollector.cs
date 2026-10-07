@@ -84,18 +84,33 @@ public abstract class ShellCollector<T> : ICollector<T>
             psi = new ProcessStartInfo
             {
                 FileName = "/bin/bash",
-                Arguments = $"-c \"{command.Replace("\"", "\\\"")}\"",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
+            psi.ArgumentList.Add("-c");
+            psi.ArgumentList.Add(command);
         }
 
         using var process = new Process { StartInfo = psi };
         process.Start();
-        var stdout = await process.StandardOutput.ReadToEndAsync(ct);
-        await process.WaitForExitAsync(ct);
-        return stdout;
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeout.CancelAfter(TimeSpan.FromSeconds(30));
+        // Drain both pipes concurrently; an unread stderr pipe can block the child.
+        var stdout = process.StandardOutput.ReadToEndAsync(timeout.Token);
+        var stderr = process.StandardError.ReadToEndAsync(timeout.Token);
+        try
+        {
+            await Task.WhenAll(stdout, stderr, process.WaitForExitAsync(timeout.Token));
+            return await stdout;
+        }
+        catch (OperationCanceledException)
+        {
+            if (!process.HasExited) process.Kill(entireProcessTree: true);
+            await process.WaitForExitAsync(CancellationToken.None);
+            if (ct.IsCancellationRequested) throw;
+            throw new TimeoutException("System probe exceeded its 30 second time limit.");
+        }
     }
 }

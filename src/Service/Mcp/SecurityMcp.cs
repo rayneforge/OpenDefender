@@ -16,21 +16,21 @@ public static class SecurityMcp
 {
     // ── Raw metrics ─────────────────────────────────────────────────────
 
-    [McpServerTool(Name = "query_security_checks", Title = "Query Security Checks")]
+    [McpServerTool(Name = "query_security_checks", Title = "Query Security Checks", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
     [Description("Query raw security checks. Properties: Id (int), Timestamp (DateTime), CheckType (string), Item (string), Result (string), Value (double), Severity (string). Supports structured filters, ordering, and paging.")]
     public static async Task<string> QuerySecurityChecks(QueryRequest request)
     {
         return await SecurityTools.QuerySecurityChecks(request);
     }
 
-    [McpServerTool(Name = "query_networking_metrics", Title = "Query Networking Metrics")]
+    [McpServerTool(Name = "query_networking_metrics", Title = "Query Networking Metrics", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
     [Description("Query raw networking metrics. Properties: Id (int), Timestamp (DateTime), Interface (string), Metric (string), Value (double), Status (string). Supports structured filters, ordering, and paging.")]
     public static async Task<string> QueryNetworkingMetrics(QueryRequest request)
     {
         return await SecurityTools.QueryNetworkingMetrics(request);
     }
 
-    [McpServerTool(Name = "query_packet_tracing", Title = "Query Packet Tracing")]
+    [McpServerTool(Name = "query_packet_tracing", Title = "Query Packet Tracing", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
     [Description("Query raw packet tracing captures. Properties: Id (int), Timestamp (DateTime), Interface (string), PacketsCaptured (int), Status (string). Supports structured filters, ordering, and paging.")]
     public static async Task<string> QueryPacketTracing(QueryRequest request)
     {
@@ -39,7 +39,12 @@ public static class SecurityMcp
 
     // ── Derived analytics ───────────────────────────────────────────────
 
-    [McpServerTool(Name = "query_security_analytics", Title = "Query Security Analytics")]
+    [McpServerTool(Name = "query_network_connections", Title = "Inspect TCP Connections", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
+    [Description("Read current TCP connections and listeners with local/remote addresses, ports, state, and Timestamp. Live snapshot; no packets or endpoint history are stored. Supports structured filters, ordering, paging. Does not measure UDP traffic, bytes per peer, connection initiation direction, or historical traffic. Unavailable inspection returns an error, not a healthy result.")]
+    public static Task<string> QueryNetworkConnections(QueryRequest request, CancellationToken ct)
+        => SecurityTools.QueryNetworkConnections(request, ct);
+
+    [McpServerTool(Name = "query_security_analytics", Title = "Query Security Analytics", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
     [Description("Query derived security analytics. Properties: Id (int), Timestamp (DateTime), CheckType (string), NewIssuesCount (int), IsBreach (bool), Severity (string). Supports structured filters, ordering, and paging.")]
     public static async Task<string> QuerySecurityAnalytics(QueryRequest request)
     {

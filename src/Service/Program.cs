@@ -1,201 +1,101 @@
+using Library.Application.Agents.Delegates;
+using Library.Application.Producers;
+using Library.Domain.Abstractions;
 using Library.Domain.Models.State;
+using Library.Infrastructure.Database;
+using Library.Infrastructure.MessageBus;
 using Microsoft.AspNetCore.OData;
+using Microsoft.EntityFrameworkCore;
 using ModelContextProtocol.AspNetCore;
 using Service;
 using Service.Services;
-using Library.Application.Producers;
-using Library.Application.Consumers;
-using Library.Infrastructure.Database;
-using Library.Infrastructure.MessageBus;
-using Library.Domain.Abstractions;
-using Library.Application.Agents.Delegates;
-using Microsoft.EntityFrameworkCore;
-using Library.Application.Services.Orchestration;
 
-var builder = WebApplication.CreateBuilder(args);
+// Resolve bundled configuration independently of the MCP client's working directory.
+var environment = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
+    ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
+var configuration = new ConfigurationBuilder()
+    .SetBasePath(AppContext.BaseDirectory)
+    .AddJsonFile("appsettings.json", optional: true)
+    .AddJsonFile($"appsettings.{environment}.json", optional: true)
+    .AddEnvironmentVariables()
+    .AddCommandLine(args)
+    .Build();
+var serviceOptions = configuration.GetSection(ServiceOptions.SectionName).Get<ServiceOptions>() ?? new();
+var stdio = string.Equals(serviceOptions.TransportType, "Stdio", StringComparison.OrdinalIgnoreCase);
+if (!stdio && !string.Equals(serviceOptions.TransportType, "Http", StringComparison.OrdinalIgnoreCase))
+    throw new ArgumentException("Service:TransportType must be Stdio or Http.");
 
-// Configure Diagnostic Options from appsettings.json
-builder.Services.Configure<ServiceOptions>(
-    builder.Configuration.GetSection(ServiceOptions.SectionName));
-
-// Resolve options for early access
-var serviceOptions = builder.Configuration.GetSection(ServiceOptions.SectionName).Get<ServiceOptions>() ?? new ServiceOptions();
-
-// If Stdio, ensure logs don't corrupt stdout (the protocol channel)
-if (serviceOptions.TransportType == "Stdio")
+WebApplicationBuilder? webBuilder = stdio ? null : WebApplication.CreateBuilder(new WebApplicationOptions
 {
-    builder.Logging.ClearProviders();
-    // Redirect logs to debug/stderr or file if needed, but keep stdout clean
-    builder.Logging.AddConsole(opt => opt.LogToStandardErrorThreshold = LogLevel.Trace); 
-}
-
-// Register MCP Server — tools auto-discovered from assembly
-if (serviceOptions.TransportType == "Stdio")
+    Args = args, ContentRootPath = AppContext.BaseDirectory, EnvironmentName = environment
+});
+IHostApplicationBuilder builder = webBuilder is not null ? webBuilder : Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
 {
-    builder.Services.AddMcpServer()
-        .WithStdioServerTransport()
-        .WithToolsFromAssembly()
-        .WithPromptsFromAssembly();
-}
-else
-{
-    builder.Services.AddMcpServer()
-        .WithHttpTransport()
-        .WithToolsFromAssembly()
-        .WithPromptsFromAssembly();
-}
+    Args = args, ContentRootPath = AppContext.BaseDirectory, EnvironmentName = environment
+});
+builder.Configuration.Sources.Clear();
+builder.Configuration.AddConfiguration(configuration);
+builder.Services.Configure<ServiceOptions>(builder.Configuration.GetSection(ServiceOptions.SectionName));
 
-// Register ReportDbContext
-builder.Services.AddDbContext<Library.Infrastructure.Database.ReportDbContext>();
-builder.Services.AddDbContext<Library.Infrastructure.Database.AnalyticsDbContext>();
+// stdout belongs exclusively to the MCP transport.
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole(options => options.LogToStandardErrorThreshold = LogLevel.Trace);
+var mcp = builder.Services.AddMcpServer().WithToolsFromAssembly().WithPromptsFromAssembly();
+if (stdio) mcp.WithStdioServerTransport();
+else mcp.WithHttpTransport();
 
-// Add services to the container.
-builder.Services.AddOpenApi();
-builder.Services.AddControllers()
-    .AddOData(opt => opt
-        .Count().Filter().Expand().Select().OrderBy().SetMaxTop(100)
-        .AddRouteComponents("odata/metrics", EdmModelBuilder.GetReportModel())
-        .AddRouteComponents("odata/analytics", EdmModelBuilder.GetAnalyticsModel())
-    );
-
-// ── LLM-gated registrations ─────────────────────────────────────────────────
-// When the "Service:Llm" section is absent from configuration, the service runs
-// in "headless" mode: no IChatClient, no agent controllers, and no agent triggers
-// in the task scheduler. Producers, consumers, OData, and MCP still work.
+builder.Services.AddDbContext<ReportDbContext>();
+builder.Services.AddDbContext<AnalyticsDbContext>();
 var llmEnabled = serviceOptions.Llm is not null;
-
 if (llmEnabled)
 {
-
-    // Register IChatClient (LLM) using configured ServiceOptions
     builder.Services.AddSingleton<Microsoft.Extensions.AI.IChatClient>(services =>
     {
         var options = services.GetRequiredService<Microsoft.Extensions.Options.IOptions<ServiceOptions>>().Value;
         return Library.Application.Factories.ChatClientFactory.Create(options.Llm!);
     });
-    
-    // Register agents
-    builder.Services.AddTransient<Library.Application.Agents.Delegates.ShieldAgent>();
-    builder.Services.AddTransient<Library.Application.Agents.Delegates.AnchorAgent>();
-    builder.Services.AddTransient<Library.Application.Agents.Delegates.CoreAgent>();
-    builder.Services.AddTransient<Library.Application.Agents.Delegates.LedgerAgent>();
-}
-if (!llmEnabled)
-{
-    // Strip agent controllers so MVC never tries to resolve them (they need IChatClient)
-    builder.Services.AddControllers()
-        .ConfigureApplicationPartManager(manager =>
-        {
-            manager.FeatureProviders.Add(
-                new Service.AgentControllerExclusionProvider());
-        });
+    builder.Services.AddTransient<ShieldAgent>();
+    builder.Services.AddTransient<AnchorAgent>();
+    builder.Services.AddTransient<CoreAgent>();
+    builder.Services.AddTransient<LedgerAgent>();
 }
 
-// Register the task channel (singleton — shared between scheduler, dispatcher, and controllers)
-var taskChannel = new TaskChannel();
-builder.Services.AddSingleton(taskChannel);
-builder.Services.AddSingleton<ITaskChannel>(taskChannel);
-
-// Build the task registry at startup — scan the entire Library assembly.
-// When LLM is disabled, exclude agent types (BaseAgent subclasses) so their
-// [TaskTrigger] methods are never scheduled. Producers & consumers still run.
-var assemblyTypes = typeof(DiagnosticProducer).Assembly.GetTypes();
-var registryTypes = llmEnabled
-    ? assemblyTypes
-    : assemblyTypes.Where(t => !t.IsSubclassOf(typeof(Library.Domain.Abstractions.BaseAgent)));
-
-var registryLoggerFactory = LoggerFactory.Create(b =>
+if (webBuilder is not null)
 {
-    if (serviceOptions.TransportType == "Stdio")
-        b.AddConsole(opt => opt.LogToStandardErrorThreshold = LogLevel.Trace);
-    else
-        b.AddConsole();
-});
-var registry = TaskRegistry.Build(
-    registryTypes,
-    registryLoggerFactory.CreateLogger("TaskRegistry"));
-builder.Services.AddSingleton(registry);
+    builder.Services.AddOpenApi();
+    var controllers = builder.Services.AddControllers().AddOData(options => options
+        .Count().Filter().Expand().Select().OrderBy().SetMaxTop(100)
+        .AddRouteComponents("odata/metrics", EdmModelBuilder.GetReportModel())
+        .AddRouteComponents("odata/analytics", EdmModelBuilder.GetAnalyticsModel()));
+    if (!llmEnabled)
+        controllers.ConfigureApplicationPartManager(manager =>
+            manager.FeatureProviders.Add(new AgentControllerExclusionProvider()));
+}
 
-// Two hosted services replace the previous four
+var channel = new TaskChannel();
+builder.Services.AddSingleton(channel);
+builder.Services.AddSingleton<ITaskChannel>(channel);
+var types = typeof(DiagnosticProducer).Assembly.GetTypes();
+using var registryLoggerFactory = LoggerFactory.Create(logging =>
+    logging.AddConsole(options => options.LogToStandardErrorThreshold = LogLevel.Trace));
+builder.Services.AddSingleton(TaskRegistry.Build(
+    llmEnabled ? types : types.Where(type => !type.IsSubclassOf(typeof(BaseAgent))),
+    registryLoggerFactory.CreateLogger("TaskRegistry")));
 builder.Services.AddHostedService<TaskSchedulerService>();
 builder.Services.AddHostedService<TaskDispatcherService>();
 
-// If "Stdio", disable HTTP server and setup MCP loop
-if (serviceOptions.TransportType == "Stdio")
+using IHost host = webBuilder is not null ? webBuilder.Build() : ((HostApplicationBuilder)builder).Build();
+using (var scope = host.Services.CreateScope())
 {
-    builder.WebHost.UseKestrel(opts => opts.Listen(System.Net.IPAddress.Loopback, 0));
+    await scope.ServiceProvider.GetRequiredService<ReportDbContext>().Database.EnsureCreatedAsync();
+    await scope.ServiceProvider.GetRequiredService<AnalyticsDbContext>().Database.EnsureCreatedAsync();
 }
-
-var app = builder.Build();
-
-// Run orchestrators on startup if database is empty.
-// In Stdio mode this must not block before app.Run() — the MCP transport
-// can only respond to the initialize handshake once the host is running.
-if (serviceOptions.TransportType != "Stdio")
+// The scheduler starts collection without delaying the MCP initialize handshake.
+if (host is WebApplication app)
 {
-    using var scope = app.Services.CreateScope();
-    var reportDb = scope.ServiceProvider.GetRequiredService<ReportDbContext>();
-    var analyticsDb = scope.ServiceProvider.GetRequiredService<AnalyticsDbContext>();
-    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-
-    logger.LogInformation("Ensuring databases are created...");
-    await reportDb.Database.EnsureCreatedAsync();
-    await analyticsDb.Database.EnsureCreatedAsync();
-
-    if (!await reportDb.Orchestrations.AnyAsync())
-    {
-        logger.LogInformation("Database is empty. Running initial orchestration...");
-        
-        var state = new OrchestrationState
-        {
-            RunId = Guid.NewGuid(),
-            StartTime = DateTime.UtcNow
-        };
-
-        var since = DateTime.UtcNow.AddHours(-serviceOptions.LookbackHours);
-        
-        try 
-        {
-            var diagnosticOrchestrator = new DiagnosticOrchestrator(since: since);
-            await diagnosticOrchestrator.RunAsync(state);
-
-            var analyticsOrchestrator = new AnalyticsOrchestrator();
-            await analyticsOrchestrator.RunAsync(state);
-
-            logger.LogInformation("Initial orchestration complete. RunId: {Id}", state.RunId);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error during initial orchestration run on empty database.");
-        }
-    }
-}
-else
-{
-    // Stdio mode: ensure DB exists but defer heavy orchestration to background
-    using var scope = app.Services.CreateScope();
-    var reportDb = scope.ServiceProvider.GetRequiredService<ReportDbContext>();
-    var analyticsDb = scope.ServiceProvider.GetRequiredService<AnalyticsDbContext>();
-    await reportDb.Database.EnsureCreatedAsync();
-    await analyticsDb.Database.EnsureCreatedAsync();
-}
-
-// Configure the HTTP request pipeline.
-if (serviceOptions.TransportType == "Http")
-{
-    if (app.Environment.IsDevelopment())
-    {
-        app.MapOpenApi();
-    }
-
+    if (app.Environment.IsDevelopment()) app.MapOpenApi();
     app.UseHttpsRedirection();
     app.MapControllers();
-    app.MapMcp();
+    app.MapMcp("/mcp");
 }
-else if (serviceOptions.TransportType == "Stdio")
-{
-    // Stdio MCP transport is handled by the hosted service registered above.
-    // No HTTP pipeline needed.
-}
-
-app.Run();
+await host.RunAsync();

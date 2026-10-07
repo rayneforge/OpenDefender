@@ -1,262 +1,152 @@
-# OpenDefender 🛡️
+# OpenDefender
 
-**OpenDefender** is a device observability and AI agent enablement platform built on **.NET 10**. Its primary purpose is to eliminate repetitive manual command execution by giving AI agents structured, read-only visibility into system state — security posture, infrastructure health, reliability, and telemetry — across **Linux and Windows** through a typed MCP interface.
+Read-only MCP tools that help an AI agent explain security and system health on a Windows device or Linux home server.
 
-Rather than granting agents broad shell access, OpenDefender collects, stages, and surfaces system telemetry through well-defined domain boundaries. Each agent role has a clearly scoped view of the data it owns, and all agents are read-only by design.
+OpenDefender gives your existing AI assistant structured observations about the machine it runs on. Ask what is listening, which remote addresses are connected, whether the firewall is enabled, or which services need attention. The assistant explains the evidence and suggests a next step; you stay in control of changes.
 
----
+**Status:** early-stage software. Windows builds and local MCP checks have been validated. CI defines Windows and Linux runtime checks. Coverage depends on the OS, installed utilities, and your account's permissions. Missing data is not proof that a device is secure.
 
-## Problem It Solves
+## Quick start
 
-Effective device monitoring requires constantly running shell commands, correlating outputs, and interpreting trends manually. OpenDefender automates that collection pipeline and surfaces the results through an MCP server so that AI agents (GitHub Copilot, etc.) can answer questions like:
-
-- _"Is the disk expected to fill in the next 48 hours?"_
-- _"Are there any firewall rules or open ports that have changed since the last run?"_
-- _"Are all my scheduled backup jobs completing successfully?"_
-- _"Is the system journal at risk of breaching the 180-day retention requirement?"_
-
-...without ever running a shell command themselves.
-
----
-
-## Architecture
-
-The system has three layers:
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  COLLECTION  (DiagnosticOrchestrator)                       │
-│  Runs shell probes: top, free, smartctl, journalctl, etc.   │
-│  Writes raw metrics → ReportDbContext (SQLite)              │
-└────────────────────────┬────────────────────────────────────┘
-                         │
-┌────────────────────────▼────────────────────────────────────┐
-│  STAGING  (AnalyticsOrchestrator)                           │
-│  Computes deltas, growth rates, breach flags, gap detection │
-│  Writes derived analytics → AnalyticsDbContext (SQLite)     │
-└────────────────────────┬────────────────────────────────────┘
-                         │
-┌────────────────────────▼────────────────────────────────────┐
-│  CONSUMPTION  (MCP Server + OData API)                      │
-│  Exposes raw + derived data to agents via structured tools  │
-└─────────────────────────────────────────────────────────────┘
-```
-
-Collection and staging run automatically on startup (if the database is empty) and on a recurring schedule via background hosted services.
-
----
-
-## Agent System
-
-OpenDefender is purpose-built to serve four specialized AI agent roles. Each agent has a defined domain, owns a specific subset of MCP tools, and is strictly read-only.
-
-### `@core` — Platform & Workload
-Observes the physical and logical foundation: hardware health, kernel stability, resource utilization, and GPU/accelerator monitoring.
-
-| Tool | Data |
-|---|---|
-| `query_resource_metrics` | CPU, memory, disk, swap vs. thresholds |
-| `query_hardware_metrics` | Device health, temperature, SMART attributes |
-| `query_kernel_metrics` | Kernel version, security params, boot metrics |
-| `query_gpu_metrics` | GPU utilization, VRAM, thermals |
-| `query_resource_analytics` | Derived deltas, growth rates, breach detection |
-
-Prompt: `infrastructure-health-check`
-
----
-
-### `@shield` — Security & Connectivity
-Observes the defensive perimeter: access control, network integrity, firewall posture, and traffic patterns.
-
-| Tool | Data |
-|---|---|
-| `query_security_checks` | Firewall state, open ports, severity flags |
-| `query_networking_metrics` | Interface IPs, link state, traffic counters |
-| `query_packet_tracing` | Active captures, anomaly indicators |
-| `query_security_analytics` | Derived breach flags, new issue counts |
-
-Prompt: `security-posture-assessment`
-
----
-
-### `@anchor` — Reliability & Recovery
-Observes the continuity posture: backup chain integrity, service stability, scheduled job health, and disaster recovery readiness.
-
-| Tool | Data |
-|---|---|
-| `query_data_recovery` | Backup target availability, mount state, size |
-| `query_service_metrics` | Service lifecycle state, uptime |
-| `query_automation_metrics` | Timer/job health, automation results |
-| `query_control_map` | Control layer status, required actions |
-| `query_reliability_analytics` | Derived degradation detection, restart flags |
-
-Prompt: `reliability-stability-review`
-
----
-
-### `@ledger` — Logging & Telemetry
-Observes the evidence pipeline: log completeness, retention compliance, shipping health, and coverage gaps.
-
-| Tool | Data |
-|---|---|
-| `query_logging_metrics` | Journal disk usage, pipeline component health |
-| `query_logging_inventory` | Log source inventory, types, sizes |
-| `query_ledger_analytics` | Growth trends, retention compliance, gap flags |
-
-Prompt: `logging-retention-audit`
-
----
-
-### Shared Cross-Reference Tool
-
-All agents may cross-reference `query_control_map` and `query_orchestrations` to understand the current control-layer status and last collection run.
-
-### Severity Classification
-
-All agents classify findings consistently:
-
-| Level | Meaning |
-|---|---|
-| **S1** | Critical — immediate action required (e.g. active breach, RPO/RTO at risk, auth logs near loss) |
-| **S2** | High |
-| **S3** | Medium |
-| **S4** | Informational |
-
----
-
-## Project Structure
-
-```text
-src/
-├── Library/
-│   ├── Application/Services/   # Collectors (DiagnosticOrchestrator, AnalyticsOrchestrator)
-│   ├── Database/               # ReportDbContext (raw) + AnalyticsDbContext (derived)
-│   ├── Domain/                 # Strongly-typed models for all metrics and analytics
-│   └── Infrastructure/         # QueryHelper, EF Core helpers
-├── Service/
-│   ├── Mcp/                    # MCP tool + prompt implementations (per agent domain)
-│   ├── Controllers/            # OData controllers (raw + analytics routes)
-│   ├── Services/               # Background hosted services (collection + retention)
-│   └── Program.cs              # Startup — Stdio or HTTP transport
-├── Cli/                        # Manual diagnostic runner
-└── Tests/
-    └── Mcp/                    # Agent-level integration tests
-```
-
-```text
-.github/
-└── agents/
-    ├── open-defneder.core.agent.md     # @core agent definition
-    ├── open-defender.shield.agent.md   # @shield agent definition
-    ├── open-defender.anchor.agent.md   # @anchor agent definition
-    └── open-defender.ledger.agent.md   # @ledger agent definition
-```
-
----
-
-## Getting Started
-
-### Prerequisites
-- .NET 10 SDK
-- Linux (collection probes use Linux system commands)
-
-### Run as MCP Server (Local Development)
-
-Ensure `TransportType: "Stdio"` in [src/Service/appsettings.json](src/Service/appsettings.json), then add to `.vscode/mcp.json`:
+Install the .NET 10 SDK and connect this server in your MCP client:
 
 ```json
 {
-  "mcp": {
-    "servers": {
-      "open-defender-dev": {
-        "type": "stdio",
-        "command": "dotnet",
-        "args": [
-          "run",
-          "--project",
-          "${workspaceFolder}/solutions/observability/src/Service/Service.csproj",
-          "--nologo",
-          "-v",
-          "quiet",
-          "--consoleLoggerParameters:ErrorsOnly"
-        ]
-      }
+  "servers": {
+    "open-defender": {
+      "type": "stdio",
+      "command": "dnx",
+      "args": ["Rayneforge.OpenDefender"]
     }
   }
 }
 ```
 
-### Run as MCP Server (Installed via NuGet / .NET Tool)
+This is VS Code's `.vscode/mcp.json` format. Other clients may use `mcpServers` instead of `servers`. `dnx` downloads and runs the NuGet tool without a global installation. It runs the version on your configured package feed; local source changes become available to users only after publication. Pin a tested published version with `Rayneforge.OpenDefender@<version>`.
 
-Install the nuget package from https://www.nuget.org/packages/Rayneforge.OpenDefender/ 
+The equivalent command is:
 
-Once the package is installed globally:
+```bash
+dotnet tool exec Rayneforge.OpenDefender
+```
+
+A permanent install is also available:
 
 ```bash
 dotnet tool install -g Rayneforge.OpenDefender
 ```
 
-You can add it to your `.vscode/mcp.json` using the `dotnet tool run` command (which ensures the correct runtime is used):
+Then use `rayneforge-opendefender` as the MCP command with empty `args`.
+
+### Without a .NET installation
+
+Download a Windows x64 or Linux x64 asset from [Releases](https://github.com/rayneforge/OpenDefender/releases), when available. Extract it and configure its executable directly:
 
 ```json
 {
-  "mcp": {
-    "servers": {
-      "open-defender": {
-        "type": "stdio",
-        "command": "dotnet",
-        "args": ["tool", "run", "rayneforge-opendefender"]
-      }
+  "servers": {
+    "open-defender": {
+      "type": "stdio",
+      "command": "C:/Tools/OpenDefender/Service.exe",
+      "args": []
     }
   }
 }
 ```
 
-Alternatively, if `rayneforge-opendefender` is in your system PATH, you can invoke it directly:
+On Linux, use an absolute path such as `/opt/opendefender/Service`. These builds include the .NET runtime and native libraries. Normal OS runtime dependencies still apply. The executable can start from any working directory.
 
-```json
-{
-  "mcp": {
-    "servers": {
-      "open-defender": {
-        "type": "stdio",
-        "command": "rayneforge-opendefender",
-        "args": []
-      }
-    }
-  }
-}
-```
+## Your first review
 
-### Run as HTTP Service (for OData browsing / debugging)
+Start the server in your MCP client and ask:
 
-Set `TransportType: "Http"` and run:
+> Review this device for a home-server owner. Explain what you observed, what you could not check, and the three most useful next steps. Do not change anything.
+
+Other useful questions:
+
+- Which TCP connections and listening ports are visible right now? Explain the local and remote addresses.
+- Is the firewall reported as active? Tell me how fresh and complete that evidence is.
+- Which services or scheduled tasks need investigation?
+- What information is missing before you can assess this machine?
+
+Background telemetry begins after startup. The first saved results take time to collect. `query_network_connections` reads a live TCP snapshot when called and does not save it to disk. Numeric IP addresses are not resolved to external services.
+
+## What it can observe
+
+| Area | Available tools and evidence |
+| --- | --- |
+| Security | `query_security_checks`, `query_security_analytics`: firewall, listening-port counts, failed-login observations and derived flags |
+| Connections | `query_network_connections`: current TCP local/remote addresses, ports, and state; `query_networking_metrics`: interface byte counters |
+| Reliability | Service states, scheduled tasks, filesystem/mount observations, and derived reliability signals |
+| Device health | CPU, memory, load/queue, kernel/OS, optional hardware and GPU probes |
+| Logging | Log usage/inventory and derived logging signals |
+| Collection | `query_orchestrations`: saved collection timestamps |
+
+The connection tool can show connected peers and listeners. It does not reconstruct past traffic, capture payloads, identify who initiated a connection, measure bytes per peer, or prove internet exposure. UDP visibility is not implemented in that tool yet. A filesystem being mounted does not establish that a backup can be restored. An analytics threshold flag does not establish compromise.
+
+## Permissions and privacy
+
+Run as an ordinary user. OpenDefender does not request elevation, invoke `sudo`, change firewall rules, restart services, install system utilities, or execute agent-supplied shell commands. Collectors run fixed OS probes. MCP tools query telemetry or inspect current TCP endpoints. All tools advertise read-only, non-destructive, local behavior; these annotations describe behavior and are not a security sandbox.
+
+Stdio is the default: the MCP client starts a child process and talks over stdin/stdout. No HTTP listener or built-in LLM is required. Logs go to stderr.
+
+Packet sampling is optional and off by default. The existing Linux `tcpdump` probe retains only a count, not packets, and requires permissions already granted to the process. Set `Service__EnablePacketCapture=true` only if you intend to enable that probe. On Windows the corresponding probe is a connection-count proxy. The live connection tool is available without this option.
+
+Saved telemetry uses `%LOCALAPPDATA%/OpenDefender` on Windows, normally `~/.local/share/OpenDefender` on Linux. Override with `OPENDEFENDER_DATA_DIR`. Default telemetry retention is two hours, with a purge scheduled every thirty minutes. Live connection snapshots are not stored. Older `.data` databases are not moved automatically.
+
+Telemetry can contain host details, addresses, and service names. Your MCP client or its AI provider can receive tool results. Review that client's data handling before connecting a sensitive machine. OpenDefender does not upload snapshots itself in the default configuration. Optional built-in LLM agents can send telemetry to a provider if you explicitly configure `Service:Llm`.
+
+Some probes need permissions or optional utilities and cannot work for every ordinary account. Several legacy probes still collapse errors into zero/empty values; consistent unknown/error reporting is a priority before treating reports as authoritative. See [planned improvements](docs/design/roadmap.md) and the [security policy](SECURITY.md).
+
+## Development and validation
+
+Requirements: .NET 10 SDK; Windows or Linux; PowerShell 7 for the protocol smoke script. Linux probes use `/bin/bash`, with tools such as `ss`, `ip`, and `journalctl`; hardware probes are optional.
 
 ```bash
-dotnet run --project src/Service/Service.csproj
+dotnet build src/ObservabilityStack.slnx -c Release
+dotnet test src/Tests/Tests.csproj -c Release --no-build --filter "Category=WindowsCommand|Category=Process|Category=NetworkConnection"
 ```
 
-Browse the intelligence layer directly:
-- Raw metrics: `http://localhost:5000/odata/metrics/ResourceMetrics`
-- Derived analytics: `http://localhost:5000/odata/analytics/SecurityAnalytics`
-- Full entity list: `ResourceMetrics`, `HardwareMetrics`, `KernelMetrics`, `GpuMetrics`, `SecurityChecks`, `NetworkingMetrics`, `PacketTracingMetrics`, `LoggingMetrics`, `LoggingInventoryMetrics`, `ServiceMetrics`, `AutomationMetrics`, `DataRecoveryMetrics`, `ControlMap`, `ResourceAnalytics`, `SecurityAnalytics`, `LedgerAnalytics`, `ReliabilityAnalytics`
+On Linux, replace `WindowsCommand` with `LinuxCommand`. Agent evaluation tests use external LLMs and are separate from these deterministic checks.
 
-### Manual Diagnostic Run (CLI)
+Publish standalone binaries:
 
 ```bash
-dotnet run --project src/Cli/Cli.csproj
+dotnet publish src/Service/Service.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false -o publish/win-x64
+dotnet publish src/Service/Service.csproj -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false -o publish/linux-x64
 ```
 
----
+Validate a published executable:
 
-## Agent Constraints (Enforced by Design)
+```powershell
+./scripts/Test-McpStdio.ps1 -PublishDirectory publish/win-x64
+```
 
-- **All agents are read-only.** No agent may restart services, modify config, rotate credentials, vacuum logs, or change any system state. They observe and flag only.
-- **Domains are isolated.** Each agent owns its tools. Cross-domain investigations require delegating to the appropriate agent.
-- **Recommendations are always explicit.** When an agent flags an issue, it recommends a specific action — but the owner or an authorized process executes it.
+Validate a newly packed NuGet tool through the same one-shot execution used by `dnx`:
 
----
+```powershell
+dotnet pack src/Service/Service.csproj -c Release -o publish/nupkg -p:Version=1.0.0-validation
+./scripts/Test-McpStdio.ps1 -PublishDirectory publish/win-x64 -PackageDirectory publish/nupkg -PackageVersion 1.0.0-validation
+```
 
-## CI/CD
+Use a fresh validation version after each package change to avoid reusing a cached package. CI builds both OS targets, runs their platform tests, and checks the standalone and packaged stdio paths. Manual dispatch publishes release assets and NuGet packages.
 
-A [GitHub Actions workflow](.github/workflows/build.yml) builds and packages self-contained executables for Linux and Windows on every push to `main`.
+HTTP/OData is an explicit development option, without built-in access control. Keep it on localhost:
+
+```bash
+dotnet run --project src/Service/Service.csproj --no-launch-profile -- --Service:TransportType=Http --urls=http://127.0.0.1:5000
+```
+
+The MCP route is `/mcp`. Raw metrics are under `/odata/metrics` and analytics under `/odata/analytics`. Optional configuration is read beside the executable; environment variables and command-line arguments override it.
+
+## Project layout
+
+- `src/Service`: MCP tools/prompts, optional HTTP API, and background services.
+- `src/Library`: fixed collectors, typed models, query helpers, SQLite storage, and optional built-in agents.
+- `src/Tests`: platform probes, parsing/process checks, and separate LLM evaluations.
+- `.github/agents`: optional Copilot roles for security, reliability, device health, and logging.
+- `docs`: design notes and reference material. Some legacy reference documents describe earlier behavior; the executable and this README define the current quick start.
+
+[Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Roadmap](docs/design/roadmap.md) · [MIT license](LICENSE)
+
+Implementation references: [MCP stdio](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports), [MCP tools](https://modelcontextprotocol.io/specification/2025-11-25/server/tools), [.NET tool execution](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-tool-exec), and [.NET single-file deployment](https://learn.microsoft.com/en-us/dotnet/core/deploying/single-file/overview).

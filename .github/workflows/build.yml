@@ -2,6 +2,16 @@ name: Build and Release
 
 on:
   workflow_dispatch:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
 
 jobs:
   build:
@@ -15,23 +25,25 @@ jobs:
             runtime: linux-x64
             asset_name: Rayneforge-OpenDefender-linux
             archive_ext: tar.gz
-            test_filter: "Category=LinuxCommand"
+            test_filter: "Category=LinuxCommand|Category=Process|Category=NetworkConnection"
           - os: windows-latest
             runtime: win-x64
             asset_name: Rayneforge-OpenDefender-windows
             archive_ext: zip
-            test_filter: "Category=WindowsCommand"
+            test_filter: "Category=WindowsCommand|Category=Process|Category=NetworkConnection"
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      with:
+        persist-credentials: false
 
     - name: Setup .NET
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
       with:
         dotnet-version: '10.0.x'
 
     - name: Restore dependencies
-      run: dotnet restore src/ObservabilityStack.slnx
+      run: dotnet restore src/ObservabilityStack.slnx -p:NuGetAuditMode=all -warnaserror:NU1903,NU1904
 
     - name: Build solution
       run: dotnet build src/ObservabilityStack.slnx -c Release --no-restore
@@ -41,7 +53,18 @@ jobs:
 
     - name: Publish Service
       run: |
-        dotnet publish src/Service/Service.csproj -c Release -r ${{ matrix.runtime }} --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -o publish/${{ matrix.runtime }}
+        dotnet publish src/Service/Service.csproj -c Release -r ${{ matrix.runtime }} --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false -o publish/${{ matrix.runtime }}
+
+    - name: Test Published Stdio Server
+      shell: pwsh
+      run: ./scripts/Test-McpStdio.ps1 -PublishDirectory publish/${{ matrix.runtime }}
+
+    - name: Pack and Test NuGet Execution
+      shell: pwsh
+      run: |
+        dotnet pack src/Service/Service.csproj -c Release -o validation-nupkg -p:Version=1.0.${{ github.run_number }}-validation.${{ github.run_attempt }}
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        ./scripts/Test-McpStdio.ps1 -PublishDirectory publish/${{ matrix.runtime }} -PackageDirectory validation-nupkg -PackageVersion 1.0.${{ github.run_number }}-validation.${{ github.run_attempt }}
 
     # Create Zip for Windows
     - name: Pack Windows
@@ -55,29 +78,39 @@ jobs:
       run: |
         tar -czvf ${{ matrix.asset_name }}.tar.gz -C publish/${{ matrix.runtime }} .
 
+    - name: Compute Archive Checksum
+      shell: pwsh
+      run: |
+        $hash = (Get-FileHash -Algorithm SHA256 '${{ matrix.asset_name }}.${{ matrix.archive_ext }}').Hash.ToLowerInvariant()
+        "$hash  ${{ matrix.asset_name }}.${{ matrix.archive_ext }}" | Set-Content '${{ matrix.asset_name }}.sha256' -Encoding ascii
+
     - name: Upload Artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
       with:
         name: ${{ matrix.asset_name }}
-        path: ${{ matrix.asset_name }}.${{ matrix.archive_ext }}
+        path: |
+          ${{ matrix.asset_name }}.${{ matrix.archive_ext }}
+          ${{ matrix.asset_name }}.sha256
 
   release:
+    if: github.event_name == 'workflow_dispatch'
     name: Create GitHub Release
     needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      packages: write
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      with:
+        persist-credentials: false
     
     - name: Download Artifacts
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
       with:
         path: artifacts
 
     - name: Create Release
-      uses: softprops/action-gh-release@v2
+      uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
       with:
         tag_name: v1.0.${{ github.run_number }}
         name: Release v1.0.${{ github.run_number }}
@@ -86,18 +119,23 @@ jobs:
         files: |
           artifacts/Rayneforge-OpenDefender-linux/Rayneforge-OpenDefender-linux.tar.gz
           artifacts/Rayneforge-OpenDefender-windows/Rayneforge-OpenDefender-windows.zip
+          artifacts/Rayneforge-OpenDefender-linux/Rayneforge-OpenDefender-linux.sha256
+          artifacts/Rayneforge-OpenDefender-windows/Rayneforge-OpenDefender-windows.sha256
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   publish-nuget:
+    if: github.event_name == 'workflow_dispatch'
     name: Publish to NuGet
     needs: build
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      with:
+        persist-credentials: false
 
     - name: Setup .NET
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
       with:
         dotnet-version: '10.0.x'
 

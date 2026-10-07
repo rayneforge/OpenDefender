@@ -144,7 +144,12 @@ public sealed class TaskSchedulerService : BackgroundService
     {
         var instance = ActivatorUtilities.CreateInstance(_serviceProvider, entry.DeclaringType);
 
-        var taskObj = entry.Method.Invoke(instance, null);
+        var arguments = entry.Method.GetParameters()
+            .Select(parameter => parameter.ParameterType == typeof(CancellationToken)
+                ? (object)ct
+                : throw new InvalidOperationException($"Unsupported trigger parameter: {parameter.Name}"))
+            .ToArray();
+        var taskObj = entry.Method.Invoke(instance, arguments);
 
         if (taskObj is null)
             return null;
